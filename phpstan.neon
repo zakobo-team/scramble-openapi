@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - src/
+        - tests/
+        - config/
+
+    viewDirectories:
+        - resources/views/
+
+    level: 6
+
+    phpVersion: 80400
