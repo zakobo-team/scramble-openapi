@@ -14,6 +14,10 @@ class ScrambleSecurityRequirements implements OperationTransformer
 {
     public function handle(Operation $operation, RouteInfo $routeInfo): void
     {
+        if ($operation->security === []) {
+            return;
+        }
+
         $uri = $routeInfo->route->uri;
         $apiPrefix = (string) config('scramble-sso-auth-driver.security.api_prefix', 'api/v4/');
 
