@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Zakobo\ScrambleSsoAuthDriver\Tests\Feature;
+namespace Zakobo\ScrambleOpenApi\Tests\Feature;
 
 use PHPUnit\Framework\Attributes\Test;
-use Zakobo\ScrambleSsoAuthDriver\Tests\TestCase;
+use Zakobo\ScrambleOpenApi\Tests\TestCase;
 
 class SwaggerUiTest extends TestCase
 {
     #[Test]
     public function it_serves_the_swagger_ui_with_auth_bootstrap_configuration(): void
     {
-        config(['scramble-sso-auth-driver.swagger_ui.auth_bootstrap_path' => '/api/v4/pa/auth-bootstrap']);
+        config(['scramble-openapi.swagger_ui.auth_bootstrap_path' => '/api/v4/pa/auth-bootstrap']);
 
         $response = $this->get('/docs/swagger');
 
@@ -39,7 +39,7 @@ class SwaggerUiTest extends TestCase
     #[Test]
     public function it_can_use_static_oauth_metadata_without_auth_bootstrap(): void
     {
-        config(['scramble-sso-auth-driver.oauth2.client_id' => 'docs-client-id']);
+        config(['scramble-openapi.oauth2.client_id' => 'docs-client-id']);
 
         $response = $this->get('/docs/swagger');
 
@@ -88,7 +88,7 @@ class SwaggerUiTest extends TestCase
     #[Test]
     public function it_uses_configured_oauth_redirect_url_when_provided(): void
     {
-        config(['scramble-sso-auth-driver.oauth2.redirect_url' => 'https://api.example.test/oauth2-redirect.html']);
+        config(['scramble-openapi.oauth2.redirect_url' => 'https://api.example.test/oauth2-redirect.html']);
 
         $response = $this->get('/docs/swagger');
 
@@ -100,14 +100,14 @@ class SwaggerUiTest extends TestCase
     public function it_passes_custom_tenant_security_schemes_and_scopes_to_the_swagger_ui(): void
     {
         config([
-            'scramble-sso-auth-driver.swagger_ui.oauth_scheme' => 'sso',
-            'scramble-sso-auth-driver.swagger_ui.swagger_ui_dist_version' => '5.20.1',
-            'scramble-sso-auth-driver.tenant.enabled' => true,
-            'scramble-sso-auth-driver.tenant.id' => 'accounting-swagger',
-            'scramble-sso-auth-driver.tenant.scheme' => 'tenant',
-            'scramble-sso-auth-driver.tenant.header_name' => 'X-Accounting-Tenant-ID',
-            'scramble-sso-auth-driver.tenant.oauth_parameter' => 'accounting_tenant_id',
-            'scramble-sso-auth-driver.oauth2.scopes' => ['read', 'write'],
+            'scramble-openapi.swagger_ui.oauth_scheme' => 'sso',
+            'scramble-openapi.swagger_ui.swagger_ui_dist_version' => '5.20.1',
+            'scramble-openapi.tenant.enabled' => true,
+            'scramble-openapi.tenant.id' => 'accounting-swagger',
+            'scramble-openapi.tenant.scheme' => 'tenant',
+            'scramble-openapi.tenant.header_name' => 'X-Accounting-Tenant-ID',
+            'scramble-openapi.tenant.oauth_parameter' => 'accounting_tenant_id',
+            'scramble-openapi.oauth2.scopes' => ['read', 'write'],
         ]);
 
         $response = $this->get('/docs/swagger');

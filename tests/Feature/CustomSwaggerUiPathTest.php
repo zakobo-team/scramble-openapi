@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Zakobo\ScrambleSsoAuthDriver\Tests\Feature;
+namespace Zakobo\ScrambleOpenApi\Tests\Feature;
 
 use PHPUnit\Framework\Attributes\Test;
-use Zakobo\ScrambleSsoAuthDriver\Tests\TestCase;
+use Zakobo\ScrambleOpenApi\Tests\TestCase;
 
 class CustomSwaggerUiPathTest extends TestCase
 {
@@ -13,8 +13,8 @@ class CustomSwaggerUiPathTest extends TestCase
     {
         parent::getEnvironmentSetUp($app);
 
-        $app['config']->set('scramble-sso-auth-driver.swagger_ui.path', '/internal/swagger');
-        $app['config']->set('scramble-sso-auth-driver.swagger_ui.oauth_redirect_path', '/internal/oauth2-redirect.html');
+        $app['config']->set('scramble-openapi.swagger_ui.path', '/internal/swagger');
+        $app['config']->set('scramble-openapi.swagger_ui.oauth_redirect_path', '/internal/oauth2-redirect.html');
     }
 
     #[Test]

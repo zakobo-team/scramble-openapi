@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Zakobo\ScrambleSsoAuthDriver\Tests;
+namespace Zakobo\ScrambleOpenApi\Tests;
 
 use Dedoc\Scramble\ScrambleServiceProvider;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
-use Zakobo\ScrambleSsoAuthDriver\ScrambleSsoAuthDriverServiceProvider;
+use Zakobo\ScrambleOpenApi\ScrambleOpenApiServiceProvider;
 
 abstract class TestCase extends OrchestraTestCase
 {
@@ -14,7 +14,7 @@ abstract class TestCase extends OrchestraTestCase
     {
         return [
             ScrambleServiceProvider::class,
-            ScrambleSsoAuthDriverServiceProvider::class,
+            ScrambleOpenApiServiceProvider::class,
         ];
     }
 

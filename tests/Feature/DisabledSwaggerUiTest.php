@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Zakobo\ScrambleSsoAuthDriver\Tests\Feature;
+namespace Zakobo\ScrambleOpenApi\Tests\Feature;
 
 use PHPUnit\Framework\Attributes\Test;
-use Zakobo\ScrambleSsoAuthDriver\Tests\TestCase;
+use Zakobo\ScrambleOpenApi\Tests\TestCase;
 
 class DisabledSwaggerUiTest extends TestCase
 {
@@ -13,7 +13,7 @@ class DisabledSwaggerUiTest extends TestCase
     {
         parent::getEnvironmentSetUp($app);
 
-        $app['config']->set('scramble-sso-auth-driver.swagger_ui.enabled', false);
+        $app['config']->set('scramble-openapi.swagger_ui.enabled', false);
     }
 
     #[Test]
