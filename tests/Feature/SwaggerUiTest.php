@@ -29,12 +29,25 @@ class SwaggerUiTest extends TestCase
         $response->assertViewHas('tenantEnabled', false);
         $response->assertSee('usePkceWithAuthorizationCodeGrant', false);
         $response->assertSee('useBasicAuthenticationWithAccessCodeGrant: false', false);
-        $response->assertSee('filter: true', false);
         $response->assertSee('config.tenantEnabled && config.oauthTenantParameter', false);
         $response->assertSee('spec.components?.securitySchemes?.[config.oauthScheme]', false);
         $response->assertSee('authorizationUrl = oauth.authorization_url', false);
         $response->assertSee('tokenUrl = oauth.token_url', false);
         $response->assertSee('resolveOAuthMetadata(config, headers)', false);
+    }
+
+    #[Test]
+    public function it_serves_a_zakobo_endpoint_filter_that_matches_operation_metadata(): void
+    {
+        $response = $this->get('/docs/swagger');
+
+        $response->assertOk();
+        $response->assertSee('id="swagger-endpoint-filter"', false);
+        $response->assertSee('Filter by method, path, summary or tag. Example: cms, /v4/pa, products', false);
+        $response->assertSee('bootEndpointFilter(config)', false);
+        $response->assertSee('opblock-summary-path', false);
+        $response->assertSee('opblock-summary-method', false);
+        $response->assertSee('opblock-summary-description', false);
     }
 
     #[Test]

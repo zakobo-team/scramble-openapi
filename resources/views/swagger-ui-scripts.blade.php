@@ -189,12 +189,79 @@
         });
     }
 
+    function normalizeEndpointFilterText(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function operationSearchText(section, operation) {
+        const values = [
+            section.querySelector('.opblock-tag')?.textContent,
+            operation.querySelector('.opblock-summary-method')?.textContent,
+            operation.querySelector('.opblock-summary-path')?.textContent,
+            operation.querySelector('.opblock-summary-description')?.textContent,
+        ];
+
+        return normalizeEndpointFilterText(values.filter(Boolean).join(' '));
+    }
+
+    function applyEndpointFilter(query) {
+        const needle = normalizeEndpointFilterText(query);
+        const sections = document.querySelectorAll('#swagger-ui .opblock-tag-section');
+
+        sections.forEach((section) => {
+            let hasVisibleOperation = false;
+
+            section.querySelectorAll('.opblock').forEach((operation) => {
+                const matches = needle === '' || operationSearchText(section, operation).includes(needle);
+
+                operation.style.display = matches ? '' : 'none';
+                hasVisibleOperation = hasVisibleOperation || matches;
+            });
+
+            section.style.display = needle === '' || hasVisibleOperation ? '' : 'none';
+        });
+    }
+
+    function bootEndpointFilter(config) {
+        const input = document.getElementById(config.endpointFilterId);
+        const container = document.getElementById('swagger-ui');
+
+        if (!input || !container) {
+            return;
+        }
+
+        let scheduled = false;
+        const scheduleFilter = () => {
+            if (scheduled) {
+                return;
+            }
+
+            scheduled = true;
+
+            window.requestAnimationFrame(() => {
+                scheduled = false;
+                applyEndpointFilter(input.value);
+            });
+        };
+
+        input.addEventListener('input', scheduleFilter);
+
+        new MutationObserver(scheduleFilter).observe(container, {
+            childList: true,
+            subtree: true,
+        });
+
+        scheduleFilter();
+    }
+
     function bootSwaggerUi(spec, oauth, config) {
         window.ui = SwaggerUIBundle({
             spec,
             dom_id: '#swagger-ui',
             deepLinking: true,
-            filter: true,
             persistAuthorization: true,
             oauth2RedirectUrl: config.oauth2RedirectUrl,
             requestInterceptor: (request) => {
@@ -237,6 +304,7 @@
             tenantHeaderName: @json($tenantHeaderName),
             oauthTenantParameter: @json($oauthTenantParameter),
             authButtonId: 'swagger-auth-button',
+            endpointFilterId: 'swagger-endpoint-filter',
         };
         const headers = {
             Accept: 'application/json',
@@ -255,5 +323,6 @@
         assertOAuthMetadata(oauth);
         bootSwaggerUi(applyOAuthMetadata(spec, oauth, config), oauth, config);
         bootAuthenticationButton(oauth, config);
+        bootEndpointFilter(config);
     };
 </script>
