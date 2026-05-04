@@ -21,6 +21,7 @@ use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Schema as DatabaseSchema;
 use PHPUnit\Framework\Attributes\Test;
 use Zakobo\ScrambleOpenApi\OpenApi\JsonApiCollectionOperationTransformer;
+use Zakobo\ScrambleOpenApi\Tests\Fixtures\InferredProductIndexController;
 use Zakobo\ScrambleOpenApi\Tests\Fixtures\ProductIndexController;
 use Zakobo\ScrambleOpenApi\Tests\TestCase;
 
@@ -124,6 +125,70 @@ class JsonApiCollectionOperationTransformerTest extends TestCase
         $this->assertStringContainsString('Available include paths: category.', $this->parameterDescription($operation, 'include'));
         $this->assertStringContainsString('JSON:API include filter for category.name.', $this->parameterDescription($operation, 'includeFilter[category.name]'));
         $this->assertStringContainsString('Available fields: name, sku, computed.', $this->parameterDescription($operation, 'fields[products]'));
+    }
+
+    #[Test]
+    public function it_documents_json_api_collection_calls_that_infer_the_resource_from_the_model(): void
+    {
+        $this->createJsonApiQueryTables();
+
+        $operation = Operation::make('get')
+            ->setPath('api/v4/products')
+            ->addResponse(
+                Response::make(200)
+                    ->setDescription('Array of items')
+                    ->setContent('application/json', Schema::fromType(
+                        (new ObjectType)->addProperty('data', new StringType),
+                    )),
+            );
+
+        $openApi = OpenApi::make('3.1.0');
+
+        $transformer = new JsonApiCollectionOperationTransformer(
+            app(Infer::class),
+            app(TypeTransformer::class, [
+                'context' => new OpenApiContext($openApi, new GeneratorConfig),
+            ]),
+            new GeneratorConfig,
+        );
+
+        $transformer->handle(
+            $operation,
+            new RouteInfo(
+                new Route(['GET'], 'api/v4/products', [
+                    'uses' => InferredProductIndexController::class.'@__invoke',
+                ]),
+                'GET',
+            ),
+        );
+
+        $response = $operation->responses[0];
+
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertArrayNotHasKey('application/json', $response->content);
+        $this->assertArrayHasKey('application/vnd.api+json', $response->content);
+        $this->assertSame(
+            '#/components/schemas/ProductResource',
+            $response->content['application/vnd.api+json']->toArray()['properties']['data']['items']['$ref'],
+        );
+        $this->assertSame([
+            'filter[name]',
+            'filter[sku]',
+            'filter[category]',
+            'filter[category.name]',
+            'sort',
+            'include',
+            'includeFilter[category.name]',
+            'fields[products]',
+            'fields[product_categories]',
+            'page[number]',
+            'page[size]',
+        ], array_map(
+            static fn (mixed $parameter): string => $parameter instanceof Parameter
+                ? $parameter->name
+                : '',
+            $operation->parameters,
+        ));
     }
 
     /**

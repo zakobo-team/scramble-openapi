@@ -63,13 +63,15 @@ class JsonApiErrorResponses implements DocumentTransformer
 
     private function replaceErrorResponseContent(Response $response): void
     {
-        if (! is_int($response->code) || ! array_key_exists($response->code, self::ERROR_RESPONSES)) {
+        $code = $this->responseCode($response);
+
+        if ($code === null || ! array_key_exists($code, self::ERROR_RESPONSES)) {
             return;
         }
 
         $response->content = [];
         $response
-            ->setDescription($response->description ?: self::ERROR_RESPONSES[$response->code]['description'])
+            ->setDescription($response->description ?: self::ERROR_RESPONSES[$code]['description'])
             ->setContent(self::JSON_API_MEDIA_TYPE, Schema::fromType($this->errorDocumentType()));
     }
 
@@ -89,7 +91,7 @@ class JsonApiErrorResponses implements DocumentTransformer
     {
         foreach ($responses as $response) {
             if ($response instanceof Response) {
-                if ($response->code === $code) {
+                if ($this->responseCode($response) === $code) {
                     return true;
                 }
 
@@ -102,12 +104,25 @@ class JsonApiErrorResponses implements DocumentTransformer
                 continue;
             }
 
-            if ($referencedResponse instanceof Response && $referencedResponse->code === $code) {
+            if ($referencedResponse instanceof Response && $this->responseCode($referencedResponse) === $code) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private function responseCode(Response $response): ?int
+    {
+        if (is_int($response->code)) {
+            return $response->code;
+        }
+
+        if (is_string($response->code) && ctype_digit($response->code)) {
+            return (int) $response->code;
+        }
+
+        return null;
     }
 
     private function errorDocumentType(): ObjectType

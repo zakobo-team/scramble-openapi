@@ -104,6 +104,36 @@ class JsonApiErrorResponsesTest extends TestCase
     }
 
     #[Test]
+    public function it_normalizes_string_error_response_codes_without_adding_duplicate_standard_references(): void
+    {
+        $document = OpenApi::make('3.1.0')
+            ->addPath(
+                Path::make('v1/accounts')
+                    ->addOperation(
+                        Operation::make('get')
+                            ->addResponse(
+                                Response::make('422')
+                                    ->setDescription('Validation failed')
+                                    ->setContent('application/json', Schema::fromType(
+                                        (new ObjectType)->addProperty('message', new StringType),
+                                    )),
+                            ),
+                    ),
+            );
+
+        (new JsonApiErrorResponses)->handle($document, new OpenApiContext($document, new GeneratorConfig));
+
+        $operation = $document->paths[0]->operations['get'];
+        $response = $operation->responses[0];
+
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertArrayNotHasKey('application/json', $response->content);
+        $this->assertArrayHasKey('application/vnd.api+json', $response->content);
+        $this->assertCount(6, $operation->responses);
+        $this->assertSame('Validation failed', $response->description);
+    }
+
+    #[Test]
     public function it_does_not_touch_success_response_components(): void
     {
         $document = OpenApi::make('3.1.0');

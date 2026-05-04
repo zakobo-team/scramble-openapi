@@ -36,8 +36,24 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
     public function handle(Operation $operation, RouteInfo $routeInfo): void
     {
         $methodCall = $this->jsonApiCollectionCallFrom($routeInfo);
-        $resourceClass = $methodCall !== null ? $this->resourceClassFrom($methodCall) : null;
-        $modelClass = $methodCall !== null ? $this->modelClassFrom($methodCall->var) : null;
+
+        if ($methodCall === null) {
+            return;
+        }
+
+        $resourceClass = $this->resourceClassFrom($methodCall);
+        $modelClass = $this->modelClassFrom($methodCall->var);
+        $documentation = null;
+
+        if ($resourceClass !== null && ! is_subclass_of($resourceClass, JsonApiResource::class)) {
+            return;
+        }
+
+        if ($modelClass !== null) {
+            $documentation = app(JsonApiQueryDocumentationFactory::class)
+                ->for(new $modelClass, $resourceClass, Request::create('/'));
+            $resourceClass = $documentation->resourceClass;
+        }
 
         if ($resourceClass === null || ! is_subclass_of($resourceClass, JsonApiResource::class)) {
             return;
@@ -45,11 +61,8 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
 
         $this->replaceSuccessResponse($operation, $resourceClass);
 
-        if ($modelClass !== null) {
-            $this->addJsonApiQueryParameters(
-                $operation,
-                app(JsonApiQueryDocumentationFactory::class)->for(new $modelClass, $resourceClass, Request::create('/')),
-            );
+        if ($documentation !== null) {
+            $this->addJsonApiQueryParameters($operation, $documentation);
         }
     }
 

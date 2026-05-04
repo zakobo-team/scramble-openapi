@@ -12,12 +12,7 @@ use Illuminate\Http\Request;
  */
 class FakeProductBuilder extends Builder
 {
-    /**
-     * Fixture-only stand-in for the app macro used by Scramble AST inspection.
-     *
-     * @param  class-string<ProductResource>  $resourceClass
-     */
-    public function jsonApiCollection(string $resourceClass, Request $request): mixed
+    public function jsonApiCollection(string|Request $resourceClass, ?Request $request = null): mixed
     {
         return null;
     }
