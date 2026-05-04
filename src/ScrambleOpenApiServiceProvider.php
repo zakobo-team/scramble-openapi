@@ -52,6 +52,10 @@ class ScrambleOpenApiServiceProvider extends ServiceProvider
         ], 'scramble-openapi-views');
 
         $this->publishes([
+            __DIR__.'/../resources/views' => resource_path('views/vendor/scramble-sso-auth-driver'),
+        ], 'scramble-sso-auth-driver-views');
+
+        $this->publishes([
             __DIR__.'/../config/scramble-openapi.php' => config_path('scramble-sso-auth-driver.php'),
         ], 'scramble-sso-auth-driver-config');
     }

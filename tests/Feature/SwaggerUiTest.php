@@ -89,6 +89,14 @@ class SwaggerUiTest extends TestCase
     }
 
     #[Test]
+    public function it_keeps_legacy_route_names_available(): void
+    {
+        $this->assertSame(url('/docs/swagger'), route('scramble-sso-auth-driver.swagger-ui'));
+        $this->assertSame(url('/oauth2-redirect.html'), route('scramble-sso-auth-driver.oauth2-redirect'));
+        $this->assertSame(url('/docs/swagger/oauth2-redirect'), route('scramble-sso-auth-driver.oauth2-redirect.legacy'));
+    }
+
+    #[Test]
     public function it_replaces_the_default_swagger_authorize_modal_with_direct_oauth_actions(): void
     {
         $response = $this->get('/docs/swagger');

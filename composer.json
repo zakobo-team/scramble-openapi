@@ -6,7 +6,7 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "git@github.com:zakobo-team/laravel-jsonapi-query.git"
+            "url": "https://github.com/zakobo-team/laravel-jsonapi-query.git"
         }
     ],
     "require": {
