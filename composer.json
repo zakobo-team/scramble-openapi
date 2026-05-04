@@ -3,6 +3,12 @@
     "description": "Zakobo OpenAPI conventions, authentication, and Swagger UI integration for Scramble.",
     "type": "library",
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "git@github.com:zakobo-team/laravel-jsonapi-query.git"
+        }
+    ],
     "require": {
         "php": "^8.4",
         "dedoc/scramble": "^0.13.22",
