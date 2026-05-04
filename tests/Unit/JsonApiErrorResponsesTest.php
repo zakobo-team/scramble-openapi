@@ -41,6 +41,11 @@ class JsonApiErrorResponsesTest extends TestCase
         $this->assertSame('array', $schema['properties']['errors']['type']);
         $this->assertSame(['errors'], $schema['required']);
         $this->assertSame(['status', 'title'], $schema['properties']['errors']['items']['required']);
+        $this->assertSame(
+            ['pointer', 'parameter', 'header'],
+            array_keys($schema['properties']['errors']['items']['properties']['source']['properties']),
+        );
+        $this->assertArrayHasKey('additionalProperties', $schema['properties']['errors']['items']['properties']['meta']);
     }
 
     #[Test]

@@ -71,6 +71,11 @@ class JsonApiCollectionOperationTransformerTest extends TestCase
 
         $this->assertSame('array', $schema['properties']['data']['type']);
         $this->assertSame('#/components/schemas/ProductResource', $schema['properties']['data']['items']['$ref']);
+        $this->assertSame('object', $schema['properties']['links']['type']);
+        $this->assertSame('object', $schema['properties']['meta']['type']);
+        $this->assertArrayHasKey('additionalProperties', $schema['properties']['links']);
+        $this->assertArrayHasKey('additionalProperties', $schema['properties']['meta']);
+        $this->assertSame(['data'], $schema['required']);
 
         $this->assertSame([
             'filter[name]',

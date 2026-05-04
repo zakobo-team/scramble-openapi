@@ -11,6 +11,7 @@ use Dedoc\Scramble\Support\Generator\Response;
 use Dedoc\Scramble\Support\Generator\Schema;
 use Dedoc\Scramble\Support\Generator\Types\ArrayType as OpenApiArrayType;
 use Dedoc\Scramble\Support\Generator\Types\IntegerType;
+use Dedoc\Scramble\Support\Generator\Types\MixedType;
 use Dedoc\Scramble\Support\Generator\Types\ObjectType as OpenApiObjectType;
 use Dedoc\Scramble\Support\Generator\Types\StringType;
 use Dedoc\Scramble\Support\RouteInfo;
@@ -122,14 +123,22 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
 
         $response->setContent(
             self::JSON_API_MEDIA_TYPE,
-            Schema::fromType(
-                (new OpenApiObjectType)
-                    ->addProperty('data', (new OpenApiArrayType)->setItems(
-                        $this->openApiTransformer->transform(new ObjectType($resourceClass)),
-                    ))
-                    ->setRequired(['data']),
-            ),
+            Schema::fromType($this->collectionDocumentType($resourceClass)),
         );
+    }
+
+    /**
+     * @param  class-string<JsonApiResource>  $resourceClass
+     */
+    private function collectionDocumentType(string $resourceClass): OpenApiObjectType
+    {
+        return (new OpenApiObjectType)
+            ->addProperty('data', (new OpenApiArrayType)->setItems(
+                $this->openApiTransformer->transform(new ObjectType($resourceClass)),
+            ))
+            ->addProperty('links', (new OpenApiObjectType)->additionalProperties(new MixedType))
+            ->addProperty('meta', (new OpenApiObjectType)->additionalProperties(new MixedType))
+            ->setRequired(['data']);
     }
 
     private function successResponse(Operation $operation): Response

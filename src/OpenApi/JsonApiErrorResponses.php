@@ -12,6 +12,7 @@ use Dedoc\Scramble\Support\Generator\Reference;
 use Dedoc\Scramble\Support\Generator\Response;
 use Dedoc\Scramble\Support\Generator\Schema;
 use Dedoc\Scramble\Support\Generator\Types\ArrayType;
+use Dedoc\Scramble\Support\Generator\Types\MixedType;
 use Dedoc\Scramble\Support\Generator\Types\ObjectType;
 use Dedoc\Scramble\Support\Generator\Types\StringType;
 
@@ -118,10 +119,18 @@ class JsonApiErrorResponses implements DocumentTransformer
                     ->addProperty('title', new StringType)
                     ->addProperty('detail', new StringType)
                     ->addProperty('code', new StringType)
-                    ->addProperty('source', new ObjectType)
-                    ->addProperty('meta', new ObjectType)
+                    ->addProperty('source', $this->errorSourceType())
+                    ->addProperty('meta', (new ObjectType)->additionalProperties(new MixedType))
                     ->setRequired(['status', 'title']),
             ))
             ->setRequired(['errors']);
+    }
+
+    private function errorSourceType(): ObjectType
+    {
+        return (new ObjectType)
+            ->addProperty('pointer', new StringType)
+            ->addProperty('parameter', new StringType)
+            ->addProperty('header', new StringType);
     }
 }
