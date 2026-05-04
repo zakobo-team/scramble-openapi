@@ -29,15 +29,30 @@ class JsonApiErrorResponses implements DocumentTransformer
     public function handle(OpenApi $document, OpenApiContext $context): void
     {
         foreach ($document->components->responses as $response) {
-            if (! array_key_exists($response->code, self::DESCRIPTIONS)) {
-                continue;
-            }
-
-            $response->content = [];
-            $response
-                ->setDescription($response->description ?: self::DESCRIPTIONS[$response->code])
-                ->setContent(self::JSON_API_MEDIA_TYPE, Schema::fromType($this->errorDocumentType()));
+            $this->replaceErrorResponseContent($response);
         }
+
+        foreach ($document->paths as $path) {
+            foreach ($path->operations as $operation) {
+                foreach ($operation->responses ?? [] as $response) {
+                    if ($response instanceof Response) {
+                        $this->replaceErrorResponseContent($response);
+                    }
+                }
+            }
+        }
+    }
+
+    private function replaceErrorResponseContent(Response $response): void
+    {
+        if (! array_key_exists($response->code, self::DESCRIPTIONS)) {
+            return;
+        }
+
+        $response->content = [];
+        $response
+            ->setDescription($response->description ?: self::DESCRIPTIONS[$response->code])
+            ->setContent(self::JSON_API_MEDIA_TYPE, Schema::fromType($this->errorDocumentType()));
     }
 
     private function errorDocumentType(): ObjectType

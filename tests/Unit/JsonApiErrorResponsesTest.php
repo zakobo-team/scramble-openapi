@@ -7,6 +7,8 @@ namespace Zakobo\ScrambleOpenApi\Tests\Unit;
 use Dedoc\Scramble\GeneratorConfig;
 use Dedoc\Scramble\OpenApiContext;
 use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\Operation;
+use Dedoc\Scramble\Support\Generator\Path;
 use Dedoc\Scramble\Support\Generator\Response;
 use Dedoc\Scramble\Support\Generator\Schema;
 use Dedoc\Scramble\Support\Generator\Types\ObjectType;
@@ -39,6 +41,32 @@ class JsonApiErrorResponsesTest extends TestCase
         $this->assertSame('array', $schema['properties']['errors']['type']);
         $this->assertSame(['errors'], $schema['required']);
         $this->assertSame(['status', 'title'], $schema['properties']['errors']['items']['required']);
+    }
+
+    #[Test]
+    public function it_replaces_inline_operation_error_responses_with_json_api_error_documents(): void
+    {
+        $document = OpenApi::make('3.1.0')
+            ->addPath(
+                Path::make('v1/accounts')
+                    ->addOperation(
+                        Operation::make('get')
+                            ->addResponse(
+                                Response::make(400)
+                                    ->setDescription('Bad request')
+                                    ->setContent('application/json', Schema::fromType(
+                                        (new ObjectType)->addProperty('message', new StringType),
+                                    )),
+                            ),
+                    ),
+            );
+
+        (new JsonApiErrorResponses)->handle($document, new OpenApiContext($document, new GeneratorConfig));
+
+        $response = $document->paths[0]->operations['get']->responses[0];
+
+        $this->assertArrayNotHasKey('application/json', $response->content);
+        $this->assertArrayHasKey('application/vnd.api+json', $response->content);
     }
 
     #[Test]

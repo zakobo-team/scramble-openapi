@@ -7,9 +7,12 @@
         "php": "^8.4",
         "dedoc/scramble": "^0.13.22",
         "illuminate/contracts": "^13.0",
+        "illuminate/database": "^13.0",
+        "illuminate/http": "^13.0",
         "illuminate/routing": "^13.0",
         "illuminate/support": "^13.0",
-        "illuminate/view": "^13.0"
+        "illuminate/view": "^13.0",
+        "zakobo/laravel-jsonapi-query": "^0.1.8"
     },
     "require-dev": {
         "larastan/larastan": "^3.0",
