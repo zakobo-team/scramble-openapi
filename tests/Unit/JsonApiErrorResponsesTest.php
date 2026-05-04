@@ -70,6 +70,35 @@ class JsonApiErrorResponsesTest extends TestCase
     }
 
     #[Test]
+    public function it_adds_standard_json_api_error_response_references_to_every_operation(): void
+    {
+        $document = OpenApi::make('3.1.0')
+            ->addPath(
+                Path::make('v1/accounts')
+                    ->addOperation(
+                        Operation::make('get')
+                            ->addResponse(Response::make(200)->setContent(
+                                'application/vnd.api+json',
+                                Schema::fromType(new ObjectType),
+                            )),
+                    ),
+            );
+
+        (new JsonApiErrorResponses)->handle($document, new OpenApiContext($document, new GeneratorConfig));
+
+        $operation = $document->paths[0]->operations['get']->toArray();
+
+        $this->assertArrayHasKey('200', $operation['responses']);
+        $this->assertSame('#/components/responses/JsonApiBadRequest', $operation['responses']['400']['$ref']);
+        $this->assertSame('#/components/responses/JsonApiUnauthenticated', $operation['responses']['401']['$ref']);
+        $this->assertSame('#/components/responses/JsonApiForbidden', $operation['responses']['403']['$ref']);
+        $this->assertSame('#/components/responses/JsonApiNotFound', $operation['responses']['404']['$ref']);
+        $this->assertSame('#/components/responses/JsonApiValidationError', $operation['responses']['422']['$ref']);
+        $this->assertSame('#/components/responses/JsonApiServerError', $operation['responses']['500']['$ref']);
+        $this->assertArrayHasKey('application/vnd.api+json', $document->components->responses['JsonApiValidationError']->content);
+    }
+
+    #[Test]
     public function it_does_not_touch_success_response_components(): void
     {
         $document = OpenApi::make('3.1.0');

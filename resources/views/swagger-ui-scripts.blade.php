@@ -194,6 +194,7 @@
             spec,
             dom_id: '#swagger-ui',
             deepLinking: true,
+            filter: true,
             persistAuthorization: true,
             oauth2RedirectUrl: config.oauth2RedirectUrl,
             requestInterceptor: (request) => {

@@ -29,6 +29,7 @@ class SwaggerUiTest extends TestCase
         $response->assertViewHas('tenantEnabled', false);
         $response->assertSee('usePkceWithAuthorizationCodeGrant', false);
         $response->assertSee('useBasicAuthenticationWithAccessCodeGrant: false', false);
+        $response->assertSee('filter: true', false);
         $response->assertSee('config.tenantEnabled && config.oauthTenantParameter', false);
         $response->assertSee('spec.components?.securitySchemes?.[config.oauthScheme]', false);
         $response->assertSee('authorizationUrl = oauth.authorization_url', false);
