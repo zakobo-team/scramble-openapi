@@ -225,11 +225,49 @@
         });
     }
 
-    function bootEndpointFilter(config) {
-        const input = document.getElementById(config.endpointFilterId);
-        const container = document.getElementById('swagger-ui');
+    function ensureEndpointFilterInput(config) {
+        let input = document.getElementById(config.endpointFilterId);
 
-        if (!input || !container) {
+        if (input) {
+            return input;
+        }
+
+        const schemeContainer = document.querySelector('#swagger-ui .scheme-container');
+
+        if (!schemeContainer || !schemeContainer.parentElement) {
+            return null;
+        }
+
+        const toolbar = document.createElement('div');
+        const content = document.createElement('div');
+        const label = document.createElement('label');
+
+        input = document.createElement('input');
+
+        toolbar.className = 'zakobo-swagger-toolbar';
+        content.className = 'wrapper';
+        label.className = 'zakobo-swagger-toolbar__label';
+        label.htmlFor = config.endpointFilterId;
+        label.textContent = 'Filter endpoints';
+
+        input.id = config.endpointFilterId;
+        input.className = 'zakobo-swagger-toolbar__input';
+        input.type = 'search';
+        input.placeholder = 'Filter by method, path, summary or tag. Example: cms, /v4/pa, products';
+        input.autocomplete = 'off';
+
+        content.append(label, input);
+        toolbar.append(content);
+        schemeContainer.parentElement.insertBefore(toolbar, schemeContainer.nextSibling);
+
+        return input;
+    }
+
+    function bootEndpointFilter(config) {
+        const container = document.getElementById('swagger-ui');
+        let input = document.getElementById(config.endpointFilterId);
+
+        if (!container) {
             return;
         }
 
@@ -243,17 +281,29 @@
 
             window.requestAnimationFrame(() => {
                 scheduled = false;
-                applyEndpointFilter(input.value);
+                input = input || ensureEndpointFilterInput(config);
+                applyEndpointFilter(input?.value || '');
+                bindInput();
             });
         };
 
-        input.addEventListener('input', scheduleFilter);
+        const bindInput = () => {
+            input = input || ensureEndpointFilterInput(config);
+
+            if (!input || input.dataset.endpointFilterBound === 'true') {
+                return;
+            }
+
+            input.dataset.endpointFilterBound = 'true';
+            input.addEventListener('input', scheduleFilter);
+        };
 
         new MutationObserver(scheduleFilter).observe(container, {
             childList: true,
             subtree: true,
         });
 
+        bindInput();
         scheduleFilter();
     }
 

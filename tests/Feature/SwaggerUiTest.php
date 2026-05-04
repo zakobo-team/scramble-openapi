@@ -42,7 +42,10 @@ class SwaggerUiTest extends TestCase
         $response = $this->get('/docs/swagger');
 
         $response->assertOk();
-        $response->assertSee('id="swagger-endpoint-filter"', false);
+        $response->assertSee("endpointFilterId: 'swagger-endpoint-filter'", false);
+        $response->assertSee('ensureEndpointFilterInput(config)', false);
+        $response->assertSee("content.className = 'wrapper'", false);
+        $response->assertSee('schemeContainer.parentElement.insertBefore(toolbar, schemeContainer.nextSibling)', false);
         $response->assertSee('Filter by method, path, summary or tag. Example: cms, /v4/pa, products', false);
         $response->assertSee('bootEndpointFilter(config)', false);
         $response->assertSee('opblock-summary-path', false);

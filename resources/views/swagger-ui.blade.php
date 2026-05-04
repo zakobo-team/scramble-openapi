@@ -16,7 +16,7 @@
         }
 
         .zakobo-swagger-toolbar {
-            padding: 16px 40px 0;
+            padding-top: 36px;
         }
 
         .zakobo-swagger-toolbar__label {
@@ -35,7 +35,6 @@
             color: #111827;
             font-family: sans-serif;
             font-size: 14px;
-            max-width: 520px;
             padding: 10px 12px;
             width: 100%;
         }
@@ -67,18 +66,6 @@
     <button id="swagger-auth-button" class="zakobo-swagger-auth__button" type="button">
         Authentication
     </button>
-</div>
-<div class="zakobo-swagger-toolbar">
-    <label class="zakobo-swagger-toolbar__label" for="swagger-endpoint-filter">
-        Filter endpoints
-    </label>
-    <input
-        id="swagger-endpoint-filter"
-        class="zakobo-swagger-toolbar__input"
-        type="search"
-        placeholder="Filter by method, path, summary or tag. Example: cms, /v4/pa, products"
-        autocomplete="off"
-    >
 </div>
 <div id="swagger-ui"></div>
 <script src="{{ 'https://unpkg.com/swagger-ui-dist@'.$swaggerUiDistVersion.'/swagger-ui-bundle.js' }}"></script>
