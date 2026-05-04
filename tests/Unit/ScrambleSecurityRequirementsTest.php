@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Zakobo\ScrambleSsoAuthDriver\Tests\Unit;
+namespace Zakobo\ScrambleOpenApi\Tests\Unit;
 
 use Dedoc\Scramble\Support\Generator\Operation;
 use Dedoc\Scramble\Support\RouteInfo;
 use Illuminate\Routing\Route;
 use PHPUnit\Framework\Attributes\Test;
-use Zakobo\ScrambleSsoAuthDriver\OpenApi\ScrambleSecurityRequirements;
-use Zakobo\ScrambleSsoAuthDriver\Tests\TestCase;
+use Zakobo\ScrambleOpenApi\OpenApi\ScrambleSecurityRequirements;
+use Zakobo\ScrambleOpenApi\Tests\TestCase;
 
 class ScrambleSecurityRequirementsTest extends TestCase
 {
@@ -17,8 +17,8 @@ class ScrambleSecurityRequirementsTest extends TestCase
     public function it_requires_only_the_tenant_header_for_tenant_public_routes(): void
     {
         config([
-            'scramble-sso-auth-driver.tenant.enabled' => true,
-            'scramble-sso-auth-driver.security.tenant_only_uri_patterns' => ['api/v4/pa/*'],
+            'scramble-openapi.tenant.enabled' => true,
+            'scramble-openapi.security.tenant_only_uri_patterns' => ['api/v4/pa/*'],
         ]);
 
         $operation = Operation::make('GET');
@@ -34,8 +34,8 @@ class ScrambleSecurityRequirementsTest extends TestCase
     public function it_preserves_endpoints_that_scramble_has_marked_as_unauthenticated(): void
     {
         config([
-            'scramble-sso-auth-driver.tenant.enabled' => true,
-            'scramble-sso-auth-driver.security.tenant_only_uri_patterns' => ['api/v4/pa/*'],
+            'scramble-openapi.tenant.enabled' => true,
+            'scramble-openapi.security.tenant_only_uri_patterns' => ['api/v4/pa/*'],
         ]);
 
         $operation = Operation::make('GET');
@@ -49,7 +49,7 @@ class ScrambleSecurityRequirementsTest extends TestCase
     #[Test]
     public function it_requires_oauth2_and_the_tenant_header_for_authenticated_api_routes(): void
     {
-        config(['scramble-sso-auth-driver.tenant.enabled' => true]);
+        config(['scramble-openapi.tenant.enabled' => true]);
 
         $operation = Operation::make('GET');
 
@@ -77,8 +77,8 @@ class ScrambleSecurityRequirementsTest extends TestCase
     public function it_allows_tenant_only_uri_patterns_to_be_configured(): void
     {
         config([
-            'scramble-sso-auth-driver.tenant.enabled' => true,
-            'scramble-sso-auth-driver.security.tenant_only_uri_patterns' => ['api/v4/public/*'],
+            'scramble-openapi.tenant.enabled' => true,
+            'scramble-openapi.security.tenant_only_uri_patterns' => ['api/v4/public/*'],
         ]);
         $operation = Operation::make('GET');
 

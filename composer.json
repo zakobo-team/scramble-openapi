@@ -1,15 +1,24 @@
 {
-    "name": "zakobo/scramble-sso-auth-driver",
-    "description": "Zakobo SSO authentication and Swagger UI integration for Scramble.",
+    "name": "zakobo/scramble-openapi",
+    "description": "Zakobo OpenAPI conventions, authentication, and Swagger UI integration for Scramble.",
     "type": "library",
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/zakobo-team/laravel-jsonapi-query.git"
+        }
+    ],
     "require": {
         "php": "^8.4",
         "dedoc/scramble": "^0.13.22",
         "illuminate/contracts": "^13.0",
+        "illuminate/database": "^13.0",
+        "illuminate/http": "^13.0",
         "illuminate/routing": "^13.0",
         "illuminate/support": "^13.0",
-        "illuminate/view": "^13.0"
+        "illuminate/view": "^13.0",
+        "zakobo/laravel-jsonapi-query": "^0.1.8"
     },
     "require-dev": {
         "larastan/larastan": "^3.0",
@@ -17,14 +26,18 @@
         "orchestra/testbench": "^11.0",
         "phpunit/phpunit": "^11.0"
     },
+    "replace": {
+        "zakobo/scramble-sso-auth-driver": "self.version"
+    },
     "autoload": {
         "psr-4": {
-            "Zakobo\\ScrambleSsoAuthDriver\\": "src/"
+            "Zakobo\\ScrambleSsoAuthDriver\\": "src/Legacy/",
+            "Zakobo\\ScrambleOpenApi\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Zakobo\\ScrambleSsoAuthDriver\\Tests\\": "tests/"
+            "Zakobo\\ScrambleOpenApi\\Tests\\": "tests/"
         }
     },
     "scripts": {
@@ -47,7 +60,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Zakobo\\ScrambleSsoAuthDriver\\ScrambleSsoAuthDriverServiceProvider"
+                "Zakobo\\ScrambleOpenApi\\ScrambleOpenApiServiceProvider"
             ]
         }
     },

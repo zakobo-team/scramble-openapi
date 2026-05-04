@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Zakobo\ScrambleSsoAuthDriver\Tests\Unit;
+namespace Zakobo\ScrambleOpenApi\Tests\Unit;
 
 use Dedoc\Scramble\Support\Generator\InfoObject;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use PHPUnit\Framework\Attributes\Test;
-use Zakobo\ScrambleSsoAuthDriver\OpenApi\ScrambleAuthentication;
-use Zakobo\ScrambleSsoAuthDriver\Tests\TestCase;
+use Zakobo\ScrambleOpenApi\OpenApi\ScrambleAuthentication;
+use Zakobo\ScrambleOpenApi\Tests\TestCase;
 
 class ScrambleAuthenticationTest extends TestCase
 {
@@ -16,8 +16,8 @@ class ScrambleAuthenticationTest extends TestCase
     public function it_documents_oauth2_as_authorization_code_for_pkce(): void
     {
         config([
-            'scramble-sso-auth-driver.oauth2.authorization_url' => 'https://auth.example.test/oauth/authorize',
-            'scramble-sso-auth-driver.oauth2.token_url' => 'https://auth.example.test/oauth/token',
+            'scramble-openapi.oauth2.authorization_url' => 'https://auth.example.test/oauth/authorize',
+            'scramble-openapi.oauth2.token_url' => 'https://auth.example.test/oauth/token',
         ]);
 
         $spec = $this->openApi()->toArray();
@@ -44,7 +44,7 @@ class ScrambleAuthenticationTest extends TestCase
     #[Test]
     public function it_documents_tenant_header_security_when_tenant_support_is_enabled(): void
     {
-        config(['scramble-sso-auth-driver.tenant.enabled' => true]);
+        config(['scramble-openapi.tenant.enabled' => true]);
 
         $spec = $this->openApi()->toArray();
         $tenantHeader = $spec['components']['securitySchemes']['tenantHeader'];
@@ -62,9 +62,9 @@ class ScrambleAuthenticationTest extends TestCase
     public function it_allows_security_scheme_names_to_be_configured(): void
     {
         config([
-            'scramble-sso-auth-driver.swagger_ui.oauth_scheme' => 'sso',
-            'scramble-sso-auth-driver.tenant.enabled' => true,
-            'scramble-sso-auth-driver.tenant.scheme' => 'tenant',
+            'scramble-openapi.swagger_ui.oauth_scheme' => 'sso',
+            'scramble-openapi.tenant.enabled' => true,
+            'scramble-openapi.tenant.scheme' => 'tenant',
         ]);
 
         $spec = $this->openApi()->toArray();
@@ -81,8 +81,8 @@ class ScrambleAuthenticationTest extends TestCase
     public function it_allows_the_tenant_header_name_to_be_configured(): void
     {
         config([
-            'scramble-sso-auth-driver.tenant.enabled' => true,
-            'scramble-sso-auth-driver.tenant.header_name' => 'X-Accounting-Tenant-ID',
+            'scramble-openapi.tenant.enabled' => true,
+            'scramble-openapi.tenant.header_name' => 'X-Accounting-Tenant-ID',
         ]);
 
         $spec = $this->openApi()->toArray();

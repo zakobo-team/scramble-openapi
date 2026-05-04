@@ -1,6 +1,6 @@
-# Zakobo Scramble SSO Auth Driver
+# Zakobo Scramble OpenAPI
 
-Zakobo SSO authentication and Swagger UI integration for Laravel apps using `dedoc/scramble`.
+Zakobo OpenAPI conventions, SSO authentication and Swagger UI integration for Laravel apps using `dedoc/scramble`.
 
 The goal is that an app can install Scramble, install this package, publish config when needed, and get working API docs without copying service providers, routes, views or OpenAPI auth classes into the app.
 
@@ -12,6 +12,9 @@ The package provides:
 - A direct Authentication/Logout button instead of Swagger UI's default auth modal.
 - OAuth2 redirect view for Swagger UI.
 - A Stoplight/Scramble docs view with optional tenant header injection.
+- JSON:API collection response normalization for `jsonApiCollection(...)` endpoints.
+- JSON:API error response schemas.
+- Include enum cleanup for recursive relationship paths.
 
 ## Quick Start
 
@@ -19,7 +22,7 @@ Install Scramble first, then install this package:
 
 ```bash
 composer require dedoc/scramble
-composer require zakobo/scramble-sso-auth-driver
+composer require zakobo/scramble-openapi
 ```
 
 The package is auto-discovered by Laravel and auto-configures Scramble by default.
@@ -39,7 +42,7 @@ No app service provider, route file, controller, view or OpenAPI auth class is r
 Publish the config when the app needs tenant support, custom paths, custom OAuth URLs, or a fixed Swagger OAuth client:
 
 ```bash
-php artisan vendor:publish --tag=scramble-sso-auth-driver-config
+php artisan vendor:publish --tag=scramble-openapi-config
 ```
 
 To make the Swagger UI Authentication button work, configure one of these:
@@ -73,9 +76,9 @@ return [
     ],
 
     'oauth2' => [
-        'client_id' => env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH2_CLIENT_ID'),
-        'authorization_url' => env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH2_AUTH_URL', 'https://auth.zakobo.test/oauth/authorize'),
-        'token_url' => env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH2_TOKEN_URL', 'https://auth.zakobo.test/oauth/token'),
+        'client_id' => env('SCRAMBLE_OPENAPI_OAUTH2_CLIENT_ID'),
+        'authorization_url' => env('SCRAMBLE_OPENAPI_OAUTH2_AUTH_URL', 'https://auth.zakobo.test/oauth/authorize'),
+        'token_url' => env('SCRAMBLE_OPENAPI_OAUTH2_TOKEN_URL', 'https://auth.zakobo.test/oauth/token'),
     ],
 ];
 ```
@@ -89,19 +92,19 @@ Example:
 ```php
 return [
     'swagger_ui' => [
-        'auth_bootstrap_path' => env('SCRAMBLE_SSO_AUTH_DRIVER_AUTH_BOOTSTRAP_PATH', '/api/v4/pa/auth-bootstrap'),
+        'auth_bootstrap_path' => env('SCRAMBLE_OPENAPI_AUTH_BOOTSTRAP_PATH', '/api/v4/pa/auth-bootstrap'),
     ],
 
     'tenant' => [
         'enabled' => true,
-        'id' => env('SCRAMBLE_SSO_AUTH_DRIVER_TENANT_ID', 'swagger'),
-        'scheme' => env('SCRAMBLE_SSO_AUTH_DRIVER_TENANT_SCHEME', 'tenantHeader'),
-        'header_name' => env('SCRAMBLE_SSO_AUTH_DRIVER_TENANT_HEADER_NAME', 'X-Tenant-ID'),
-        'oauth_parameter' => env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH_TENANT_PARAMETER', 'tenant_id'),
+        'id' => env('SCRAMBLE_OPENAPI_TENANT_ID', 'swagger'),
+        'scheme' => env('SCRAMBLE_OPENAPI_TENANT_SCHEME', 'tenantHeader'),
+        'header_name' => env('SCRAMBLE_OPENAPI_TENANT_HEADER_NAME', 'X-Tenant-ID'),
+        'oauth_parameter' => env('SCRAMBLE_OPENAPI_OAUTH_TENANT_PARAMETER', 'tenant_id'),
     ],
 
     'security' => [
-        'api_prefix' => env('SCRAMBLE_SSO_AUTH_DRIVER_API_PREFIX', 'api/v4/'),
+        'api_prefix' => env('SCRAMBLE_OPENAPI_API_PREFIX', 'api/v4/'),
         'tenant_only_uri_patterns' => [
             'api/v4/pa/*',
         ],
@@ -127,9 +130,9 @@ Then call the configurator manually from the app's Scramble service provider:
 
 ```php
 use Dedoc\Scramble\Scramble;
-use Zakobo\ScrambleSsoAuthDriver\ScrambleSsoAuthDriver;
+use Zakobo\ScrambleOpenApi\ScrambleOpenApi;
 
-ScrambleSsoAuthDriver::configure(
+ScrambleOpenApi::configure(
     Scramble::configure()
         ->preferPatchMethod()
         // Add app-specific Scramble configuration here.
@@ -143,14 +146,16 @@ This keeps the package-owned OAuth, tenant security, docs view and Swagger UI se
 Publish config:
 
 ```bash
-php artisan vendor:publish --tag=scramble-sso-auth-driver-config
+php artisan vendor:publish --tag=scramble-openapi-config
 ```
 
 Publish views only when the app needs to override the package UI:
 
 ```bash
-php artisan vendor:publish --tag=scramble-sso-auth-driver-views
+php artisan vendor:publish --tag=scramble-openapi-views
 ```
+
+Legacy publish tags and namespaces from `zakobo/scramble-sso-auth-driver` remain available as a transition path, but new apps should use `zakobo/scramble-openapi`.
 
 There are no provider, controller or route stubs because those are owned by the package.
 
@@ -162,44 +167,44 @@ Example tenant-aware app override:
 
 ```php
 return [
-    'enabled' => env('SCRAMBLE_SSO_AUTH_DRIVER_ENABLED', true),
+    'enabled' => env('SCRAMBLE_OPENAPI_ENABLED', true),
 
     'scramble' => [
-        'auto_configure' => env('SCRAMBLE_SSO_AUTH_DRIVER_AUTO_CONFIGURE', true),
-        'prefer_patch_method' => env('SCRAMBLE_SSO_AUTH_DRIVER_PREFER_PATCH_METHOD', true),
-        'ui_path' => env('SCRAMBLE_SSO_AUTH_DRIVER_DOCS_PATH', '/docs/api'),
-        'document_path' => env('SCRAMBLE_SSO_AUTH_DRIVER_DOCUMENT_PATH', '/docs/api.json'),
+        'auto_configure' => env('SCRAMBLE_OPENAPI_AUTO_CONFIGURE', true),
+        'prefer_patch_method' => env('SCRAMBLE_OPENAPI_PREFER_PATCH_METHOD', true),
+        'ui_path' => env('SCRAMBLE_OPENAPI_DOCS_PATH', '/docs/api'),
+        'document_path' => env('SCRAMBLE_OPENAPI_DOCUMENT_PATH', '/docs/api.json'),
     ],
 
     'swagger_ui' => [
-        'enabled' => env('SCRAMBLE_SSO_AUTH_DRIVER_SWAGGER_UI_ENABLED', true),
-        'path' => env('SCRAMBLE_SSO_AUTH_DRIVER_SWAGGER_UI_PATH', '/docs/swagger'),
-        'spec_path' => env('SCRAMBLE_SSO_AUTH_DRIVER_SWAGGER_UI_SPEC_PATH', '/docs/api.json'),
-        'auth_bootstrap_path' => env('SCRAMBLE_SSO_AUTH_DRIVER_AUTH_BOOTSTRAP_PATH', '/api/v4/pa/auth-bootstrap'),
-        'oauth_redirect_path' => env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH_REDIRECT_PATH', '/oauth2-redirect.html'),
-        'legacy_oauth_redirect_path' => env('SCRAMBLE_SSO_AUTH_DRIVER_LEGACY_OAUTH_REDIRECT_PATH', '/docs/swagger/oauth2-redirect'),
-        'oauth_scheme' => env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH_SCHEME', 'oauth2'),
-        'swagger_ui_dist_version' => env('SCRAMBLE_SSO_AUTH_DRIVER_SWAGGER_UI_DIST_VERSION', '5.20.1'),
+        'enabled' => env('SCRAMBLE_OPENAPI_SWAGGER_UI_ENABLED', true),
+        'path' => env('SCRAMBLE_OPENAPI_SWAGGER_UI_PATH', '/docs/swagger'),
+        'spec_path' => env('SCRAMBLE_OPENAPI_SWAGGER_UI_SPEC_PATH', '/docs/api.json'),
+        'auth_bootstrap_path' => env('SCRAMBLE_OPENAPI_AUTH_BOOTSTRAP_PATH', '/api/v4/pa/auth-bootstrap'),
+        'oauth_redirect_path' => env('SCRAMBLE_OPENAPI_OAUTH_REDIRECT_PATH', '/oauth2-redirect.html'),
+        'legacy_oauth_redirect_path' => env('SCRAMBLE_OPENAPI_LEGACY_OAUTH_REDIRECT_PATH', '/docs/swagger/oauth2-redirect'),
+        'oauth_scheme' => env('SCRAMBLE_OPENAPI_OAUTH_SCHEME', 'oauth2'),
+        'swagger_ui_dist_version' => env('SCRAMBLE_OPENAPI_SWAGGER_UI_DIST_VERSION', '5.20.1'),
     ],
 
     'tenant' => [
         'enabled' => true,
-        'id' => env('SCRAMBLE_SSO_AUTH_DRIVER_TENANT_ID', 'swagger'),
-        'scheme' => env('SCRAMBLE_SSO_AUTH_DRIVER_TENANT_SCHEME', 'tenantHeader'),
-        'header_name' => env('SCRAMBLE_SSO_AUTH_DRIVER_TENANT_HEADER_NAME', 'X-Tenant-ID'),
-        'oauth_parameter' => env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH_TENANT_PARAMETER', 'tenant_id'),
+        'id' => env('SCRAMBLE_OPENAPI_TENANT_ID', 'swagger'),
+        'scheme' => env('SCRAMBLE_OPENAPI_TENANT_SCHEME', 'tenantHeader'),
+        'header_name' => env('SCRAMBLE_OPENAPI_TENANT_HEADER_NAME', 'X-Tenant-ID'),
+        'oauth_parameter' => env('SCRAMBLE_OPENAPI_OAUTH_TENANT_PARAMETER', 'tenant_id'),
     ],
 
     'oauth2' => [
-        'client_id' => env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH2_CLIENT_ID'),
-        'authorization_url' => env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH2_AUTH_URL', 'https://auth.zakobo.test/oauth/authorize'),
-        'token_url' => env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH2_TOKEN_URL', 'https://auth.zakobo.test/oauth/token'),
-        'redirect_url' => env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH2_REDIRECT_URL'),
-        'scopes' => array_values(array_filter(explode(' ', (string) env('SCRAMBLE_SSO_AUTH_DRIVER_OAUTH2_SCOPES', '')))),
+        'client_id' => env('SCRAMBLE_OPENAPI_OAUTH2_CLIENT_ID'),
+        'authorization_url' => env('SCRAMBLE_OPENAPI_OAUTH2_AUTH_URL', 'https://auth.zakobo.test/oauth/authorize'),
+        'token_url' => env('SCRAMBLE_OPENAPI_OAUTH2_TOKEN_URL', 'https://auth.zakobo.test/oauth/token'),
+        'redirect_url' => env('SCRAMBLE_OPENAPI_OAUTH2_REDIRECT_URL'),
+        'scopes' => array_values(array_filter(explode(' ', (string) env('SCRAMBLE_OPENAPI_OAUTH2_SCOPES', '')))),
     ],
 
     'security' => [
-        'api_prefix' => env('SCRAMBLE_SSO_AUTH_DRIVER_API_PREFIX', 'api/v4/'),
+        'api_prefix' => env('SCRAMBLE_OPENAPI_API_PREFIX', 'api/v4/'),
         'tenant_only_uri_patterns' => [
             'api/v4/pa/*',
         ],

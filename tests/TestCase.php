@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Zakobo\ScrambleSsoAuthDriver\Tests;
+namespace Zakobo\ScrambleOpenApi\Tests;
 
 use Dedoc\Scramble\ScrambleServiceProvider;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
-use Zakobo\ScrambleSsoAuthDriver\ScrambleSsoAuthDriverServiceProvider;
+use Zakobo\JsonApiQuery\JsonApiQueryServiceProvider;
+use Zakobo\ScrambleOpenApi\ScrambleOpenApiServiceProvider;
 
 abstract class TestCase extends OrchestraTestCase
 {
@@ -14,12 +15,19 @@ abstract class TestCase extends OrchestraTestCase
     {
         return [
             ScrambleServiceProvider::class,
-            ScrambleSsoAuthDriverServiceProvider::class,
+            JsonApiQueryServiceProvider::class,
+            ScrambleOpenApiServiceProvider::class,
         ];
     }
 
     protected function getEnvironmentSetUp($app): void
     {
         $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
+        $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.connections.testing', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+        ]);
     }
 }

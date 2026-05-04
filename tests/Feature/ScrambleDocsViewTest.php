@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Zakobo\ScrambleSsoAuthDriver\Tests\Feature;
+namespace Zakobo\ScrambleOpenApi\Tests\Feature;
 
 use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
 use PHPUnit\Framework\Attributes\Test;
-use Zakobo\ScrambleSsoAuthDriver\Tests\TestCase;
+use Zakobo\ScrambleOpenApi\Tests\TestCase;
 
 class ScrambleDocsViewTest extends TestCase
 {
@@ -24,7 +24,7 @@ class ScrambleDocsViewTest extends TestCase
     #[Test]
     public function it_renders_the_scramble_docs_view_with_the_configured_tenant_header_interceptor(): void
     {
-        $response = $this->view('scramble-sso-auth-driver::scramble-docs', [
+        $response = $this->view('scramble-openapi::scramble-docs', [
             'spec' => ['openapi' => '3.1.0'],
             'config' => [],
             'tenantEnabled' => true,

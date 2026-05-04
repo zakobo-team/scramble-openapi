@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{ config('scramble-sso-auth-driver.title', 'API Docs') }}</title>
+    <title>{{ config('scramble-openapi.title', 'API Docs') }}</title>
     <link rel="stylesheet" href="{{ 'https://unpkg.com/swagger-ui-dist@'.$swaggerUiDistVersion.'/swagger-ui.css' }}">
     <style>
         body {
@@ -13,6 +13,30 @@
             display: flex;
             justify-content: flex-end;
             padding: 16px 40px 0;
+        }
+
+        .zakobo-swagger-toolbar {
+            padding-top: 36px;
+        }
+
+        .zakobo-swagger-toolbar__label {
+            color: #111827;
+            display: block;
+            font-family: sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .zakobo-swagger-toolbar__input {
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            box-sizing: border-box;
+            color: #111827;
+            font-family: sans-serif;
+            font-size: 14px;
+            padding: 10px 12px;
+            width: 100%;
         }
 
         .zakobo-swagger-auth__button {
@@ -45,6 +69,6 @@
 </div>
 <div id="swagger-ui"></div>
 <script src="{{ 'https://unpkg.com/swagger-ui-dist@'.$swaggerUiDistVersion.'/swagger-ui-bundle.js' }}"></script>
-@include('scramble-sso-auth-driver::swagger-ui-scripts')
+@include('scramble-openapi::swagger-ui-scripts')
 </body>
 </html>

@@ -189,6 +189,124 @@
         });
     }
 
+    function normalizeEndpointFilterText(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function operationSearchText(section, operation) {
+        const values = [
+            section.querySelector('.opblock-tag')?.textContent,
+            operation.querySelector('.opblock-summary-method')?.textContent,
+            operation.querySelector('.opblock-summary-path')?.textContent,
+            operation.querySelector('.opblock-summary-description')?.textContent,
+        ];
+
+        return normalizeEndpointFilterText(values.filter(Boolean).join(' '));
+    }
+
+    function applyEndpointFilter(query) {
+        const needle = normalizeEndpointFilterText(query);
+        const sections = document.querySelectorAll('#swagger-ui .opblock-tag-section');
+
+        sections.forEach((section) => {
+            let hasVisibleOperation = false;
+
+            section.querySelectorAll('.opblock').forEach((operation) => {
+                const matches = needle === '' || operationSearchText(section, operation).includes(needle);
+
+                operation.style.display = matches ? '' : 'none';
+                hasVisibleOperation = hasVisibleOperation || matches;
+            });
+
+            section.style.display = needle === '' || hasVisibleOperation ? '' : 'none';
+        });
+    }
+
+    function ensureEndpointFilterInput(config) {
+        let input = document.getElementById(config.endpointFilterId);
+
+        if (input) {
+            return input;
+        }
+
+        const schemeContainer = document.querySelector('#swagger-ui .scheme-container');
+
+        if (!schemeContainer || !schemeContainer.parentElement) {
+            return null;
+        }
+
+        const toolbar = document.createElement('div');
+        const content = document.createElement('div');
+        const label = document.createElement('label');
+
+        input = document.createElement('input');
+
+        toolbar.className = 'zakobo-swagger-toolbar';
+        content.className = 'wrapper';
+        label.className = 'zakobo-swagger-toolbar__label';
+        label.htmlFor = config.endpointFilterId;
+        label.textContent = 'Filter endpoints';
+
+        input.id = config.endpointFilterId;
+        input.className = 'zakobo-swagger-toolbar__input';
+        input.type = 'search';
+        input.placeholder = 'Filter by method, path, summary or tag. Example: cms, /v4/pa, products';
+        input.autocomplete = 'off';
+
+        content.append(label, input);
+        toolbar.append(content);
+        schemeContainer.parentElement.insertBefore(toolbar, schemeContainer.nextSibling);
+
+        return input;
+    }
+
+    function bootEndpointFilter(config) {
+        const container = document.getElementById('swagger-ui');
+        let input = document.getElementById(config.endpointFilterId);
+
+        if (!container) {
+            return;
+        }
+
+        let scheduled = false;
+        const scheduleFilter = () => {
+            if (scheduled) {
+                return;
+            }
+
+            scheduled = true;
+
+            window.requestAnimationFrame(() => {
+                scheduled = false;
+                input = input || ensureEndpointFilterInput(config);
+                applyEndpointFilter(input?.value || '');
+                bindInput();
+            });
+        };
+
+        const bindInput = () => {
+            input = input || ensureEndpointFilterInput(config);
+
+            if (!input || input.dataset.endpointFilterBound === 'true') {
+                return;
+            }
+
+            input.dataset.endpointFilterBound = 'true';
+            input.addEventListener('input', scheduleFilter);
+        };
+
+        new MutationObserver(scheduleFilter).observe(container, {
+            childList: true,
+            subtree: true,
+        });
+
+        bindInput();
+        scheduleFilter();
+    }
+
     function bootSwaggerUi(spec, oauth, config) {
         window.ui = SwaggerUIBundle({
             spec,
@@ -236,6 +354,7 @@
             tenantHeaderName: @json($tenantHeaderName),
             oauthTenantParameter: @json($oauthTenantParameter),
             authButtonId: 'swagger-auth-button',
+            endpointFilterId: 'swagger-endpoint-filter',
         };
         const headers = {
             Accept: 'application/json',
@@ -254,5 +373,6 @@
         assertOAuthMetadata(oauth);
         bootSwaggerUi(applyOAuthMetadata(spec, oauth, config), oauth, config);
         bootAuthenticationButton(oauth, config);
+        bootEndpointFilter(config);
     };
 </script>
