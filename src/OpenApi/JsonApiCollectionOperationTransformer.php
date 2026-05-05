@@ -7,6 +7,7 @@ namespace Zakobo\ScrambleOpenApi\OpenApi;
 use Dedoc\Scramble\Extensions\OperationExtension;
 use Dedoc\Scramble\Support\Generator\Operation;
 use Dedoc\Scramble\Support\Generator\Parameter;
+use Dedoc\Scramble\Support\Generator\Reference;
 use Dedoc\Scramble\Support\Generator\Response;
 use Dedoc\Scramble\Support\Generator\Schema;
 use Dedoc\Scramble\Support\Generator\Types\ArrayType as OpenApiArrayType;
@@ -14,9 +15,15 @@ use Dedoc\Scramble\Support\Generator\Types\IntegerType;
 use Dedoc\Scramble\Support\Generator\Types\MixedType;
 use Dedoc\Scramble\Support\Generator\Types\ObjectType as OpenApiObjectType;
 use Dedoc\Scramble\Support\Generator\Types\StringType;
+use Dedoc\Scramble\Support\Generator\Types\Type as OpenApiType;
 use Dedoc\Scramble\Support\RouteInfo;
 use Dedoc\Scramble\Support\Type\ObjectType;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\JsonApi\JsonApiResource;
 use PhpParser\Node;
@@ -28,6 +35,8 @@ use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\NodeFinder;
 use Zakobo\JsonApiQuery\Documentation\JsonApiQueryDocumentation;
 use Zakobo\JsonApiQuery\Documentation\JsonApiQueryDocumentationFactory;
+use Zakobo\JsonApiQuery\Schema\ResourceSchema;
+use Zakobo\JsonApiQuery\Schema\ResourceSchemaFactory;
 
 class JsonApiCollectionOperationTransformer extends OperationExtension
 {
@@ -44,22 +53,25 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
         $resourceClass = $this->resourceClassFrom($methodCall);
         $modelClass = $this->modelClassFrom($methodCall->var);
         $documentation = null;
+        $resourceSchema = null;
 
         if ($resourceClass !== null && ! is_subclass_of($resourceClass, JsonApiResource::class)) {
             return;
         }
 
         if ($modelClass !== null) {
+            $resourceSchema = app(ResourceSchemaFactory::class)
+                ->fromModel(new $modelClass, Request::create('/'), $resourceClass);
             $documentation = app(JsonApiQueryDocumentationFactory::class)
                 ->for(new $modelClass, $resourceClass, Request::create('/'));
-            $resourceClass = $documentation->resourceClass;
+            $resourceClass = $resourceSchema->resourceClass;
         }
 
         if ($resourceClass === null || ! is_subclass_of($resourceClass, JsonApiResource::class)) {
             return;
         }
 
-        $this->replaceSuccessResponse($operation, $resourceClass);
+        $this->replaceSuccessResponse($operation, $resourceClass, $resourceSchema);
 
         if ($documentation !== null) {
             $this->addJsonApiQueryParameters($operation, $documentation);
@@ -129,29 +141,100 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
     /**
      * @param  class-string<JsonApiResource>  $resourceClass
      */
-    private function replaceSuccessResponse(Operation $operation, string $resourceClass): void
+    private function replaceSuccessResponse(Operation $operation, string $resourceClass, ?ResourceSchema $resourceSchema): void
     {
         $response = $this->successResponse($operation);
         $response->content = [];
 
         $response->setContent(
             self::JSON_API_MEDIA_TYPE,
-            Schema::fromType($this->collectionDocumentType($resourceClass)),
+            Schema::fromType($this->collectionDocumentType($resourceClass, $resourceSchema)),
         );
     }
 
     /**
      * @param  class-string<JsonApiResource>  $resourceClass
      */
-    private function collectionDocumentType(string $resourceClass): OpenApiObjectType
+    private function collectionDocumentType(string $resourceClass, ?ResourceSchema $resourceSchema = null): OpenApiObjectType
     {
         return (new OpenApiObjectType)
             ->addProperty('data', (new OpenApiArrayType)->setItems(
-                $this->openApiTransformer->transform(new ObjectType($resourceClass)),
+                $this->resourceType($resourceClass, $resourceSchema),
             ))
             ->addProperty('links', (new OpenApiObjectType)->additionalProperties(new MixedType))
             ->addProperty('meta', (new OpenApiObjectType)->additionalProperties(new MixedType))
             ->setRequired(['data']);
+    }
+
+    /**
+     * @param  class-string<JsonApiResource>  $resourceClass
+     */
+    private function resourceType(string $resourceClass, ?ResourceSchema $resourceSchema): OpenApiType
+    {
+        $type = $this->openApiTransformer->transform(new ObjectType($resourceClass));
+
+        if ($resourceSchema !== null) {
+            $this->documentToManyRelationshipLinkageAsArrays($type, $resourceSchema);
+        }
+
+        return $type;
+    }
+
+    private function documentToManyRelationshipLinkageAsArrays(OpenApiType $type, ResourceSchema $resourceSchema): void
+    {
+        if (! $type instanceof Reference) {
+            return;
+        }
+
+        $resourceSchemaComponent = $type->resolve();
+
+        if (! $resourceSchemaComponent instanceof Schema || ! $resourceSchemaComponent->type instanceof OpenApiObjectType) {
+            return;
+        }
+
+        $relationships = $resourceSchemaComponent->type->properties['relationships'] ?? null;
+
+        if (! $relationships instanceof OpenApiObjectType) {
+            return;
+        }
+
+        /** @var Model $model */
+        $model = new $resourceSchema->modelClass;
+
+        foreach ($resourceSchema->relationships as $relationship) {
+            $relation = Relation::noConstraints(
+                fn (): mixed => $model->{$relationship->relationMethodName}(),
+            );
+
+            if (! $relation instanceof Relation || ! $this->isToManyRelation($relation)) {
+                continue;
+            }
+
+            $relationshipSchema = $relationships->properties[$relationship->name] ?? null;
+
+            if (! $relationshipSchema instanceof OpenApiObjectType) {
+                continue;
+            }
+
+            $linkage = $relationshipSchema->properties['data'] ?? null;
+
+            if (! $linkage instanceof OpenApiType || $linkage instanceof OpenApiArrayType) {
+                continue;
+            }
+
+            $relationshipSchema->addProperty('data', (new OpenApiArrayType)->setItems($linkage));
+        }
+    }
+
+    /**
+     * @param  Relation<Model, Model, mixed>  $relation
+     */
+    private function isToManyRelation(Relation $relation): bool
+    {
+        return $relation instanceof BelongsToMany
+            || $relation instanceof HasMany
+            || $relation instanceof HasManyThrough
+            || $relation instanceof MorphMany;
     }
 
     private function successResponse(Operation $operation): Response

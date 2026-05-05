@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Schema as DatabaseSchema;
 use PHPUnit\Framework\Attributes\Test;
 use Zakobo\ScrambleOpenApi\OpenApi\JsonApiCollectionOperationTransformer;
 use Zakobo\ScrambleOpenApi\Tests\Fixtures\InferredProductIndexController;
+use Zakobo\ScrambleOpenApi\Tests\Fixtures\ProductCategoryIndexController;
 use Zakobo\ScrambleOpenApi\Tests\Fixtures\ProductIndexController;
 use Zakobo\ScrambleOpenApi\Tests\TestCase;
 
@@ -171,6 +172,13 @@ class JsonApiCollectionOperationTransformerTest extends TestCase
             '#/components/schemas/ProductResource',
             $response->content['application/vnd.api+json']->toArray()['properties']['data']['items']['$ref'],
         );
+
+        $productSchema = $openApi->components->toArray()['schemas']['ProductResource'];
+        $categoryLinkageSchema = $productSchema['properties']['relationships']['properties']['category']['properties']['data'];
+
+        $this->assertSame('object', $categoryLinkageSchema['type']);
+        $this->assertSame('string', $categoryLinkageSchema['properties']['id']['type']);
+        $this->assertSame('string', $categoryLinkageSchema['properties']['type']['type']);
         $this->assertSame([
             'filter[name]',
             'filter[sku]',
@@ -189,6 +197,42 @@ class JsonApiCollectionOperationTransformerTest extends TestCase
                 : '',
             $operation->parameters,
         ));
+    }
+
+    #[Test]
+    public function it_documents_to_many_relationship_linkage_data_as_an_array(): void
+    {
+        $this->createJsonApiQueryTables();
+
+        $openApi = OpenApi::make('3.1.0');
+
+        $transformer = new JsonApiCollectionOperationTransformer(
+            app(Infer::class),
+            app(TypeTransformer::class, [
+                'context' => new OpenApiContext($openApi, new GeneratorConfig),
+            ]),
+            new GeneratorConfig,
+        );
+
+        $transformer->handle(
+            Operation::make('get')
+                ->setPath('api/v4/product-categories')
+                ->addResponse(Response::make(200)->setDescription('Array of items')),
+            new RouteInfo(
+                new Route(['GET'], 'api/v4/product-categories', [
+                    'uses' => ProductCategoryIndexController::class.'@__invoke',
+                ]),
+                'GET',
+            ),
+        );
+
+        $categorySchema = $openApi->components->toArray()['schemas']['ProductCategoryWithProductsResource'];
+        $productsLinkageSchema = $categorySchema['properties']['relationships']['properties']['products']['properties']['data'];
+
+        $this->assertSame('array', $productsLinkageSchema['type']);
+        $this->assertSame('object', $productsLinkageSchema['items']['type']);
+        $this->assertSame('string', $productsLinkageSchema['items']['properties']['id']['type']);
+        $this->assertSame('string', $productsLinkageSchema['items']['properties']['type']['type']);
     }
 
     /**
