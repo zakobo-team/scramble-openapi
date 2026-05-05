@@ -7,6 +7,7 @@ namespace Zakobo\ScrambleOpenApi;
 use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
 use Illuminate\Contracts\View\Factory;
+use Zakobo\ScrambleOpenApi\OpenApi\DocumentUuidRouteParameters;
 use Zakobo\ScrambleOpenApi\OpenApi\JsonApiCollectionOperationTransformer;
 use Zakobo\ScrambleOpenApi\OpenApi\JsonApiErrorResponses;
 use Zakobo\ScrambleOpenApi\OpenApi\RemoveRecursiveIncludeEnumValues;
@@ -38,6 +39,7 @@ class ScrambleOpenApi
             ->withDocumentTransformers([
                 ScrambleAuthentication::class,
                 JsonApiErrorResponses::class,
+                DocumentUuidRouteParameters::class,
                 RemoveRecursiveIncludeEnumValues::class,
             ]);
     }
