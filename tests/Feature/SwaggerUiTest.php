@@ -68,6 +68,10 @@ class SwaggerUiTest extends TestCase
             'token_url' => 'https://auth.zakobo.test/oauth/token',
         ]);
         $response->assertSee('Missing OAuth client_id. Configure auth_bootstrap_path or oauth2.client_id.', false);
+        $this->assertStringNotContainsString(
+            'new URL(config.authBootstrapUrl)',
+            str($response->getContent())->after('window.onload = async () =>')->toString(),
+        );
     }
 
     #[Test]

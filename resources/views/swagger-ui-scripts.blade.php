@@ -359,7 +359,6 @@
         const headers = {
             Accept: 'application/json',
         };
-        const authBootstrapUrl = new URL(config.authBootstrapUrl);
 
         if (config.tenantEnabled) {
             headers[config.tenantHeaderName] = config.tenantId;
