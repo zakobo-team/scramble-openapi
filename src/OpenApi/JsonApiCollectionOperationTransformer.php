@@ -54,6 +54,7 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
         $modelClass = $this->modelClassFrom($methodCall->var);
         $documentation = null;
         $resourceSchema = null;
+        $request = Request::create('/');
 
         if ($resourceClass !== null && ! is_subclass_of($resourceClass, JsonApiResource::class)) {
             return;
@@ -61,9 +62,9 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
 
         if ($modelClass !== null) {
             $resourceSchema = app(ResourceSchemaFactory::class)
-                ->fromModel(new $modelClass, Request::create('/'), $resourceClass);
+                ->fromModel(new $modelClass, $request, $resourceClass);
             $documentation = app(JsonApiQueryDocumentationFactory::class)
-                ->for(new $modelClass, $resourceClass, Request::create('/'));
+                ->for(new $modelClass, $resourceClass, $request);
             $resourceClass = $resourceSchema->resourceClass;
         }
 
@@ -73,7 +74,10 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
 
         $this->replaceSuccessResponse($operation, $resourceClass, $resourceSchema);
 
-        if ($documentation !== null) {
+        if ($documentation !== null && $resourceSchema !== null) {
+            $documentation = app(JsonApiIndexedQueryDocumentationAugmenter::class)
+                ->augment($documentation, $resourceSchema, $request);
+
             $this->addJsonApiQueryParameters($operation, $documentation);
         }
     }
