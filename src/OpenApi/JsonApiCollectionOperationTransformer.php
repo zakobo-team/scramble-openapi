@@ -74,7 +74,7 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
 
         $this->replaceSuccessResponse($operation, $resourceClass, $resourceSchema);
 
-        if ($documentation !== null && $resourceSchema !== null) {
+        if ($documentation !== null) {
             $documentation = app(JsonApiIndexedQueryDocumentationAugmenter::class)
                 ->augment($documentation, $resourceSchema, $request);
 
