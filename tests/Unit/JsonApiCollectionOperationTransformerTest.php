@@ -75,9 +75,48 @@ class JsonApiCollectionOperationTransformerTest extends TestCase
         $this->assertSame('#/components/schemas/ProductResource', $schema['properties']['data']['items']['$ref']);
         $this->assertSame('object', $schema['properties']['links']['type']);
         $this->assertSame('object', $schema['properties']['meta']['type']);
-        $this->assertArrayHasKey('additionalProperties', $schema['properties']['links']);
-        $this->assertArrayHasKey('additionalProperties', $schema['properties']['meta']);
         $this->assertSame(['data'], $schema['required']);
+
+        $linksSchema = $schema['properties']['links'];
+        $metaSchema = $schema['properties']['meta'];
+        $metaLinkSchema = $metaSchema['properties']['links']['items'];
+
+        $this->assertArrayNotHasKey('additionalProperties', $linksSchema);
+        $this->assertSame(['first', 'last', 'prev', 'next'], $linksSchema['required']);
+        $this->assertSame('string', $linksSchema['properties']['first']['type']);
+        $this->assertSame('string', $linksSchema['properties']['last']['type']);
+        $this->assertSame(['string', 'null'], $linksSchema['properties']['prev']['type']);
+        $this->assertSame(['string', 'null'], $linksSchema['properties']['next']['type']);
+        $this->assertArrayNotHasKey('example', $linksSchema);
+
+        $this->assertArrayNotHasKey('additionalProperties', $metaSchema);
+        $this->assertSame([
+            'current_page',
+            'from',
+            'last_page',
+            'links',
+            'path',
+            'per_page',
+            'to',
+            'total',
+        ], $metaSchema['required']);
+        $this->assertSame('integer', $metaSchema['properties']['current_page']['type']);
+        $this->assertSame(['integer', 'null'], $metaSchema['properties']['from']['type']);
+        $this->assertSame('integer', $metaSchema['properties']['last_page']['type']);
+        $this->assertSame('array', $metaSchema['properties']['links']['type']);
+        $this->assertSame('string', $metaSchema['properties']['path']['type']);
+        $this->assertSame('integer', $metaSchema['properties']['per_page']['type']);
+        $this->assertSame(['integer', 'null'], $metaSchema['properties']['to']['type']);
+        $this->assertSame('integer', $metaSchema['properties']['total']['type']);
+        $this->assertArrayNotHasKey('example', $metaSchema);
+
+        $this->assertSame('object', $metaLinkSchema['type']);
+        $this->assertArrayNotHasKey('additionalProperties', $metaLinkSchema);
+        $this->assertSame(['url', 'label', 'page', 'active'], $metaLinkSchema['required']);
+        $this->assertSame(['string', 'null'], $metaLinkSchema['properties']['url']['type']);
+        $this->assertSame('string', $metaLinkSchema['properties']['label']['type']);
+        $this->assertSame(['integer', 'null'], $metaLinkSchema['properties']['page']['type']);
+        $this->assertSame('boolean', $metaLinkSchema['properties']['active']['type']);
 
         $this->assertSame([
             'filter[name]',
