@@ -75,9 +75,48 @@ class JsonApiCollectionOperationTransformerTest extends TestCase
         $this->assertSame('#/components/schemas/ProductResource', $schema['properties']['data']['items']['$ref']);
         $this->assertSame('object', $schema['properties']['links']['type']);
         $this->assertSame('object', $schema['properties']['meta']['type']);
-        $this->assertArrayHasKey('additionalProperties', $schema['properties']['links']);
-        $this->assertArrayHasKey('additionalProperties', $schema['properties']['meta']);
         $this->assertSame(['data'], $schema['required']);
+
+        $linksSchema = $schema['properties']['links'];
+        $metaSchema = $schema['properties']['meta'];
+        $metaLinkSchema = $metaSchema['properties']['links']['items'];
+
+        $this->assertArrayNotHasKey('additionalProperties', $linksSchema);
+        $this->assertSame(['first', 'last', 'prev', 'next'], $linksSchema['required']);
+        $this->assertSame('string', $linksSchema['properties']['first']['type']);
+        $this->assertSame('string', $linksSchema['properties']['last']['type']);
+        $this->assertSame(['string', 'null'], $linksSchema['properties']['prev']['type']);
+        $this->assertSame(['string', 'null'], $linksSchema['properties']['next']['type']);
+        $this->assertArrayNotHasKey('example', $linksSchema);
+
+        $this->assertArrayNotHasKey('additionalProperties', $metaSchema);
+        $this->assertSame([
+            'current_page',
+            'from',
+            'last_page',
+            'links',
+            'path',
+            'per_page',
+            'to',
+            'total',
+        ], $metaSchema['required']);
+        $this->assertSame('integer', $metaSchema['properties']['current_page']['type']);
+        $this->assertSame(['integer', 'null'], $metaSchema['properties']['from']['type']);
+        $this->assertSame('integer', $metaSchema['properties']['last_page']['type']);
+        $this->assertSame('array', $metaSchema['properties']['links']['type']);
+        $this->assertSame('string', $metaSchema['properties']['path']['type']);
+        $this->assertSame('integer', $metaSchema['properties']['per_page']['type']);
+        $this->assertSame(['integer', 'null'], $metaSchema['properties']['to']['type']);
+        $this->assertSame('integer', $metaSchema['properties']['total']['type']);
+        $this->assertArrayNotHasKey('example', $metaSchema);
+
+        $this->assertSame('object', $metaLinkSchema['type']);
+        $this->assertArrayNotHasKey('additionalProperties', $metaLinkSchema);
+        $this->assertSame(['url', 'label', 'page', 'active'], $metaLinkSchema['required']);
+        $this->assertSame(['string', 'null'], $metaLinkSchema['properties']['url']['type']);
+        $this->assertSame('string', $metaLinkSchema['properties']['label']['type']);
+        $this->assertSame(['integer', 'null'], $metaLinkSchema['properties']['page']['type']);
+        $this->assertSame('boolean', $metaLinkSchema['properties']['active']['type']);
 
         $this->assertSame([
             'filter[name]',
@@ -107,11 +146,19 @@ class JsonApiCollectionOperationTransformerTest extends TestCase
         $pageSizeSchema = $this->parameterSchema($operation, 'page[size]');
 
         $this->assertNull($this->parameter($operation, 'filter'));
+        $this->assertNull($this->parameter($operation, 'filter[computed]'));
         $this->assertSame('string', $nameFilterSchema['type']);
         $this->assertSame('string', $relationshipFilterSchema['type']);
         $this->assertArrayNotHasKey('additionalProperties', $nameFilterSchema);
 
-        $this->assertSame(['name', '-name', 'sku', '-sku', 'category.name', '-category.name'], $sortSchema['items']['enum']);
+        $this->assertSame([
+            'name',
+            '-name',
+            'sku',
+            '-sku',
+            'category.name',
+            '-category.name',
+        ], $sortSchema['items']['enum']);
         $this->assertSame(['category'], $includeSchema['items']['enum']);
 
         $this->assertSame('string', $includeFilterSchema['type']);
@@ -126,6 +173,43 @@ class JsonApiCollectionOperationTransformerTest extends TestCase
         $this->assertStringContainsString('Available include paths: category.', $this->parameterDescription($operation, 'include'));
         $this->assertStringContainsString('JSON:API include filter for category.name.', $this->parameterDescription($operation, 'includeFilter[category.name]'));
         $this->assertStringContainsString('Available fields: name, sku, computed.', $this->parameterDescription($operation, 'fields[products]'));
+    }
+
+    #[Test]
+    public function it_documents_indexed_model_attributes_without_database_schema_lookup(): void
+    {
+        $operation = Operation::make('get')
+            ->setPath('api/v4/products')
+            ->addResponse(Response::make(200)->setDescription('Array of items'));
+
+        $openApi = OpenApi::make('3.1.0');
+
+        $transformer = new JsonApiCollectionOperationTransformer(
+            app(Infer::class),
+            app(TypeTransformer::class, [
+                'context' => new OpenApiContext($openApi, new GeneratorConfig),
+            ]),
+            new GeneratorConfig,
+        );
+
+        $transformer->handle(
+            $operation,
+            new RouteInfo(
+                new Route(['GET'], 'api/v4/products', [
+                    'uses' => ProductIndexController::class.'@__invoke',
+                ]),
+                'GET',
+            ),
+        );
+
+        $sortSchema = $this->parameterSchema($operation, 'sort');
+
+        $this->assertNotNull($this->parameter($operation, 'filter[name]'));
+        $this->assertNotNull($this->parameter($operation, 'filter[sku]'));
+        $this->assertNotNull($this->parameter($operation, 'filter[category.name]'));
+        $this->assertNull($this->parameter($operation, 'filter'));
+        $this->assertNull($this->parameter($operation, 'filter[computed]'));
+        $this->assertSame(['name', '-name', 'sku', '-sku', 'category.name', '-category.name'], $sortSchema['items']['enum']);
     }
 
     #[Test]
@@ -214,10 +298,12 @@ class JsonApiCollectionOperationTransformerTest extends TestCase
             new GeneratorConfig,
         );
 
+        $operation = Operation::make('get')
+            ->setPath('api/v4/product-categories')
+            ->addResponse(Response::make(200)->setDescription('Array of items'));
+
         $transformer->handle(
-            Operation::make('get')
-                ->setPath('api/v4/product-categories')
-                ->addResponse(Response::make(200)->setDescription('Array of items')),
+            $operation,
             new RouteInfo(
                 new Route(['GET'], 'api/v4/product-categories', [
                     'uses' => ProductCategoryIndexController::class.'@__invoke',
@@ -233,6 +319,42 @@ class JsonApiCollectionOperationTransformerTest extends TestCase
         $this->assertSame('object', $productsLinkageSchema['items']['type']);
         $this->assertSame('string', $productsLinkageSchema['items']['properties']['id']['type']);
         $this->assertSame('string', $productsLinkageSchema['items']['properties']['type']['type']);
+    }
+
+    #[Test]
+    public function it_does_not_document_to_many_relationship_sorts(): void
+    {
+        $this->createJsonApiQueryTables();
+
+        $openApi = OpenApi::make('3.1.0');
+
+        $transformer = new JsonApiCollectionOperationTransformer(
+            app(Infer::class),
+            app(TypeTransformer::class, [
+                'context' => new OpenApiContext($openApi, new GeneratorConfig),
+            ]),
+            new GeneratorConfig,
+        );
+
+        $operation = Operation::make('get')
+            ->setPath('api/v4/product-categories')
+            ->addResponse(Response::make(200)->setDescription('Array of items'));
+
+        $transformer->handle(
+            $operation,
+            new RouteInfo(
+                new Route(['GET'], 'api/v4/product-categories', [
+                    'uses' => ProductCategoryIndexController::class.'@__invoke',
+                ]),
+                'GET',
+            ),
+        );
+
+        $sortSchema = $this->parameterSchema($operation, 'sort');
+
+        $this->assertSame(['name', '-name'], $sortSchema['items']['enum']);
+        $this->assertNotContains('products.name', $sortSchema['items']['enum']);
+        $this->assertNotContains('-products.name', $sortSchema['items']['enum']);
     }
 
     /**

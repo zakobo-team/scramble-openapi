@@ -11,8 +11,8 @@ use Dedoc\Scramble\Support\Generator\Reference;
 use Dedoc\Scramble\Support\Generator\Response;
 use Dedoc\Scramble\Support\Generator\Schema;
 use Dedoc\Scramble\Support\Generator\Types\ArrayType as OpenApiArrayType;
+use Dedoc\Scramble\Support\Generator\Types\BooleanType as OpenApiBooleanType;
 use Dedoc\Scramble\Support\Generator\Types\IntegerType;
-use Dedoc\Scramble\Support\Generator\Types\MixedType;
 use Dedoc\Scramble\Support\Generator\Types\ObjectType as OpenApiObjectType;
 use Dedoc\Scramble\Support\Generator\Types\StringType;
 use Dedoc\Scramble\Support\Generator\Types\Type as OpenApiType;
@@ -54,6 +54,7 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
         $modelClass = $this->modelClassFrom($methodCall->var);
         $documentation = null;
         $resourceSchema = null;
+        $request = Request::create('/');
 
         if ($resourceClass !== null && ! is_subclass_of($resourceClass, JsonApiResource::class)) {
             return;
@@ -61,9 +62,9 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
 
         if ($modelClass !== null) {
             $resourceSchema = app(ResourceSchemaFactory::class)
-                ->fromModel(new $modelClass, Request::create('/'), $resourceClass);
+                ->fromModel(new $modelClass, $request, $resourceClass);
             $documentation = app(JsonApiQueryDocumentationFactory::class)
-                ->for(new $modelClass, $resourceClass, Request::create('/'));
+                ->for(new $modelClass, $resourceClass, $request);
             $resourceClass = $resourceSchema->resourceClass;
         }
 
@@ -74,8 +75,23 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
         $this->replaceSuccessResponse($operation, $resourceClass, $resourceSchema);
 
         if ($documentation !== null) {
+            $documentation = $this->augmentIndexedQueryDocumentation($documentation, $resourceSchema, $request);
+
             $this->addJsonApiQueryParameters($operation, $documentation);
         }
+    }
+
+    private function augmentIndexedQueryDocumentation(
+        JsonApiQueryDocumentation $documentation,
+        ?ResourceSchema $resourceSchema,
+        Request $request,
+    ): JsonApiQueryDocumentation {
+        if (! $resourceSchema instanceof ResourceSchema) {
+            return $documentation;
+        }
+
+        return app(JsonApiIndexedQueryDocumentationAugmenter::class)
+            ->augment($documentation, $resourceSchema, $request);
     }
 
     private function jsonApiCollectionCallFrom(RouteInfo $routeInfo): ?MethodCall
@@ -161,9 +177,62 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
             ->addProperty('data', (new OpenApiArrayType)->setItems(
                 $this->resourceType($resourceClass, $resourceSchema),
             ))
-            ->addProperty('links', (new OpenApiObjectType)->additionalProperties(new MixedType))
-            ->addProperty('meta', (new OpenApiObjectType)->additionalProperties(new MixedType))
+            ->addProperty('links', $this->paginationLinksType())
+            ->addProperty('meta', $this->paginationMetaType())
             ->setRequired(['data']);
+    }
+
+    private function paginationLinksType(): OpenApiObjectType
+    {
+        return (new OpenApiObjectType)
+            ->addProperty('first', new StringType)
+            ->addProperty('last', new StringType)
+            ->addProperty('prev', $this->nullableStringType())
+            ->addProperty('next', $this->nullableStringType())
+            ->setRequired(['first', 'last', 'prev', 'next']);
+    }
+
+    private function paginationMetaType(): OpenApiObjectType
+    {
+        return (new OpenApiObjectType)
+            ->addProperty('current_page', (new IntegerType)->setMin(1))
+            ->addProperty('from', $this->nullableIntegerType(1))
+            ->addProperty('last_page', (new IntegerType)->setMin(1))
+            ->addProperty('links', (new OpenApiArrayType)->setItems($this->paginationMetaLinkType()))
+            ->addProperty('path', new StringType)
+            ->addProperty('per_page', (new IntegerType)->setMin(1))
+            ->addProperty('to', $this->nullableIntegerType(1))
+            ->addProperty('total', (new IntegerType)->setMin(0))
+            ->setRequired([
+                'current_page',
+                'from',
+                'last_page',
+                'links',
+                'path',
+                'per_page',
+                'to',
+                'total',
+            ]);
+    }
+
+    private function paginationMetaLinkType(): OpenApiObjectType
+    {
+        return (new OpenApiObjectType)
+            ->addProperty('url', $this->nullableStringType())
+            ->addProperty('label', new StringType)
+            ->addProperty('page', $this->nullableIntegerType(1))
+            ->addProperty('active', new OpenApiBooleanType)
+            ->setRequired(['url', 'label', 'page', 'active']);
+    }
+
+    private function nullableStringType(): StringType
+    {
+        return (new StringType)->nullable(true);
+    }
+
+    private function nullableIntegerType(int $minimum): IntegerType
+    {
+        return (new IntegerType)->setMin($minimum)->nullable(true);
     }
 
     /**
