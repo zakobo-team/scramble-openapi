@@ -75,11 +75,23 @@ class JsonApiCollectionOperationTransformer extends OperationExtension
         $this->replaceSuccessResponse($operation, $resourceClass, $resourceSchema);
 
         if ($documentation !== null) {
-            $documentation = app(JsonApiIndexedQueryDocumentationAugmenter::class)
-                ->augment($documentation, $resourceSchema, $request);
+            $documentation = $this->augmentIndexedQueryDocumentation($documentation, $resourceSchema, $request);
 
             $this->addJsonApiQueryParameters($operation, $documentation);
         }
+    }
+
+    private function augmentIndexedQueryDocumentation(
+        JsonApiQueryDocumentation $documentation,
+        ?ResourceSchema $resourceSchema,
+        Request $request,
+    ): JsonApiQueryDocumentation {
+        if (! $resourceSchema instanceof ResourceSchema) {
+            return $documentation;
+        }
+
+        return app(JsonApiIndexedQueryDocumentationAugmenter::class)
+            ->augment($documentation, $resourceSchema, $request);
     }
 
     private function jsonApiCollectionCallFrom(RouteInfo $routeInfo): ?MethodCall
