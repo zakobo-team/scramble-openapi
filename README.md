@@ -12,7 +12,7 @@ The package provides:
 - A direct Authentication/Logout button instead of Swagger UI's default auth modal.
 - OAuth2 redirect view for Swagger UI.
 - A Stoplight/Scramble docs view with optional tenant header injection.
-- JSON:API collection response normalization for `jsonApiCollection(...)` endpoints.
+- JSON:API filter key component schemas derived from the consuming app's generated concrete filter query parameters.
 - JSON:API error response schemas.
 - Include enum cleanup for recursive relationship paths.
 

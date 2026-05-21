@@ -6,7 +6,6 @@ namespace Zakobo\ScrambleOpenApi\Tests;
 
 use Dedoc\Scramble\ScrambleServiceProvider;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
-use Zakobo\JsonApiQuery\JsonApiQueryServiceProvider;
 use Zakobo\ScrambleOpenApi\ScrambleOpenApiServiceProvider;
 
 abstract class TestCase extends OrchestraTestCase
@@ -15,7 +14,6 @@ abstract class TestCase extends OrchestraTestCase
     {
         return [
             ScrambleServiceProvider::class,
-            JsonApiQueryServiceProvider::class,
             ScrambleOpenApiServiceProvider::class,
         ];
     }
