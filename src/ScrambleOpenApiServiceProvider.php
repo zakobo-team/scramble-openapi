@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Zakobo\ScrambleOpenApi;
 
+use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\OperationBuilder;
+use Dedoc\Scramble\Support\OperationExtensions\ParameterExtractor\JsonApiResourceParametersExtractor;
 use Illuminate\Support\ServiceProvider;
+use Zakobo\ScrambleOpenApi\Performance\CachedScrambleGenerator;
+use Zakobo\ScrambleOpenApi\Performance\CachingJsonApiResourceParametersExtractor;
 
 class ScrambleOpenApiServiceProvider extends ServiceProvider
 {
@@ -20,6 +25,19 @@ class ScrambleOpenApiServiceProvider extends ServiceProvider
                     config('scramble-sso-auth-driver', []),
                 ),
             ]);
+        }
+
+        $this->app->extend(
+            JsonApiResourceParametersExtractor::class,
+            fn (JsonApiResourceParametersExtractor $inner): CachingJsonApiResourceParametersExtractor => new CachingJsonApiResourceParametersExtractor($inner),
+        );
+
+        if ((bool) config('scramble-openapi.cache.enabled', false)) {
+            $this->app->extend(Generator::class, fn (Generator $inner): CachedScrambleGenerator => new CachedScrambleGenerator(
+                operationBuilder: $this->app->make(OperationBuilder::class),
+                cacheFile: (string) config('scramble-openapi.cache.path', storage_path('framework/cache/scramble-openapi.json')),
+                watchedPaths: (array) config('scramble-openapi.cache.watched_paths', []),
+            ));
         }
     }
 
