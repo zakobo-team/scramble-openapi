@@ -1,11 +1,11 @@
 {
     "name": "zakobo/scramble-openapi",
-    "description": "Zakobo OpenAPI conventions, authentication, and Swagger UI integration for Scramble.",
+    "description": "Zakobo OpenAPI conventions, SSO login in Scalar, and Laravel Boost guidance for Scramble.",
     "type": "library",
     "license": "MIT",
     "require": {
         "php": "^8.4",
-        "dedoc/scramble": "^0.13.22",
+        "dedoc/scramble": "^0.13.42",
         "illuminate/contracts": "^13.0",
         "illuminate/database": "^13.0",
         "illuminate/http": "^13.0",
@@ -19,12 +19,8 @@
         "orchestra/testbench": "^11.0",
         "phpunit/phpunit": "^11.0"
     },
-    "replace": {
-        "zakobo/scramble-sso-auth-driver": "self.version"
-    },
     "autoload": {
         "psr-4": {
-            "Zakobo\\ScrambleSsoAuthDriver\\": "src/Legacy/",
             "Zakobo\\ScrambleOpenApi\\": "src/"
         }
     },
