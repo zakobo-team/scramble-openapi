@@ -9,6 +9,7 @@ Scramble reads the application code and builds the OpenAPI document.
 The code is the source of truth.
 The package `zakobo/scramble-openapi` adds the Zakobo conventions.
 If the app has the Scramble skill `scramble-development`, use it together with this skill.
+If the two skills disagree on endpoint titles, this skill wins. See "Summary and group".
 
 ## Rules
 
@@ -18,10 +19,42 @@ If the app has the Scramble skill `scramble-development`, use it together with t
 - Prefer inference over annotation. Types come from return types, resources, Data objects, and validation rules.
 - Do not change runtime behavior only to change the docs.
 - Do not add manual OpenAPI parameters that Scramble can infer.
-- Do not add titles, descriptions, or examples unless the task asks for them. Use `#[Endpoint]` for a title and a description.
+- Every operation needs a summary and a group. See "Summary and group".
+- Do not add descriptions, examples, or parameter text unless the task asks for them. Use `#[Endpoint]` for a description.
 - Controller boundaries follow the app architecture. They do not follow the Scramble output. Do not split or merge controllers to shape the docs.
 - Keep enum values in PHP backed enums. Scramble documents the cases.
 - Keep `scramble.renderers.scalar.proxyUrl` set to `null`.
+
+## Summary and group
+
+Every API operation needs a non-empty summary and a known group.
+The contract test `ScrambleOpenApiIntegrationTest::it_gives_every_operation_a_summary_and_a_known_group` fails in two cases:
+
+- An operation has no summary, or an empty summary.
+- The first tag of an operation is not in the allowed group list.
+
+The native skill `scramble-development` says not to add endpoint titles. In a Zakobo app, that advice is wrong. Add the title.
+The rest of the native advice holds. Do not add descriptions, examples, or parameter text unless the task asks for them.
+
+- Set the group with `#[Group]` on the controller. Use a name from the allowed list.
+- Set the summary with `#[Endpoint(title: ...)]` on the action.
+- The allowed list is the constant `DOCUMENTED_GROUPS` in the contract test of the app.
+- To add a new group, add the name to `DOCUMENTED_GROUPS` in the same change.
+
+```php
+use Dedoc\Scramble\Attributes\Endpoint;
+use Dedoc\Scramble\Attributes\Group;
+
+#[Group('Health')]
+class HealthController
+{
+    #[Endpoint(title: 'Tenant health check')]
+    public function __invoke(): JsonResponse
+    {
+        // ...
+    }
+}
+```
 
 ## Routes
 
@@ -204,6 +237,7 @@ If a contract cannot be documented in a true way, name the endpoint and the fiel
 - Run the Scramble feature tests of the app. Run `php artisan scramble:clear` first.
 - When you add or change an endpoint, add contract assertions for the new paths, the request body refs, and the filter, sort, and include enums. Do not weaken the existing assertions.
 - Export the document and read the changed paths with `jq`. Do not rely on the UI alone.
+- To check one changed endpoint, export only the changed routes to a path outside the repository. Read that file. Do not export the full document into `public/docs/api.json` for this check. Use the composer scripts or the skill of the app when it has them. A multi-tenant app can need `tenants:run` with the `swagger` tenant. Bare Scramble commands use the central connection there.
 - Check the other endpoints that use a changed resource, rule, Data object, or extension.
 
 ## Pitfalls

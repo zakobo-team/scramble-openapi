@@ -110,8 +110,16 @@ The cache lives for one PHP process.
 
 The package ships a Laravel Boost guideline and the skill `scramble-openapi-development`.
 
-Run `php artisan boost:install` or `php artisan boost:update` to install them.
 The package must be a direct dependency of the app.
+
+`php artisan boost:update` does not add a new package. Package discovery is an interactive step of `boost:install`.
+
+- New Boost setup: run `php artisan boost:install`. Select `zakobo/scramble-openapi`.
+- App that already uses Boost: add `"zakobo/scramble-openapi"` to the `packages` list in `boost.json`. Then run `php artisan boost:update`.
+
+Boost then adds `scramble-openapi-development` to `skills` in `boost.json`. Boost writes the guideline into the guideline file of the agent, for example `AGENTS.md` or `CLAUDE.md`. Boost installs the skill.
+
+After you update the package, run `php artisan boost:update` again. It refreshes the guideline and the skill.
 
 ## Testing
 
