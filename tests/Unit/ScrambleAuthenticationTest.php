@@ -15,19 +15,23 @@ class ScrambleAuthenticationTest extends TestCase
     #[Test]
     public function it_documents_oauth2_as_authorization_code_for_pkce(): void
     {
-        config([
-            'scramble-openapi.oauth2.authorization_url' => 'https://auth.example.test/oauth/authorize',
-            'scramble-openapi.oauth2.token_url' => 'https://auth.example.test/oauth/token',
-        ]);
-
         $spec = $this->openApi()->toArray();
         $oauth2 = $spec['components']['securitySchemes']['oauth2'];
 
         $this->assertSame('oauth2', $oauth2['type']);
         $this->assertArrayHasKey('authorizationCode', $oauth2['flows']);
         $this->assertArrayNotHasKey('clientCredentials', $oauth2['flows']);
-        $this->assertSame('https://auth.example.test/oauth/authorize', $oauth2['flows']['authorizationCode']['authorizationUrl']);
-        $this->assertSame('https://auth.example.test/oauth/token', $oauth2['flows']['authorizationCode']['tokenUrl']);
+    }
+
+    #[Test]
+    public function it_derives_the_oauth2_urls_from_the_auth_server_url(): void
+    {
+        config(['scramble-openapi.oauth2.server_url' => 'https://auth.example.test/']);
+
+        $flow = $this->openApi()->toArray()['components']['securitySchemes']['oauth2']['flows']['authorizationCode'];
+
+        $this->assertSame('https://auth.example.test/oauth/authorize', $flow['authorizationUrl']);
+        $this->assertSame('https://auth.example.test/oauth/token', $flow['tokenUrl']);
     }
 
     #[Test]
@@ -59,35 +63,59 @@ class ScrambleAuthenticationTest extends TestCase
     }
 
     #[Test]
-    public function it_allows_security_scheme_names_to_be_configured(): void
+    public function it_builds_the_scalar_login_with_the_tenant_header_and_query_when_tenant_support_is_enabled(): void
     {
         config([
-            'scramble-openapi.swagger_ui.oauth_scheme' => 'sso',
+            'app.url' => 'https://api.example.test/',
+            'scramble-openapi.oauth2.client_id' => 'client-id',
             'scramble-openapi.tenant.enabled' => true,
-            'scramble-openapi.tenant.scheme' => 'tenant',
+            'scramble-openapi.tenant.id' => 'swagger',
         ]);
 
-        $spec = $this->openApi()->toArray();
-
-        $this->assertArrayHasKey('sso', $spec['components']['securitySchemes']);
-        $this->assertArrayHasKey('tenant', $spec['components']['securitySchemes']);
         $this->assertSame([
-            'sso' => [],
-            'tenant' => [],
-        ], $spec['security'][0]);
+            'preferredSecurityScheme' => [['oauth2', 'tenantHeader']],
+            'securitySchemes' => [
+                'tenantHeader' => [
+                    'name' => 'X-Tenant-ID',
+                    'in' => 'header',
+                    'value' => 'swagger',
+                ],
+                'oauth2' => [
+                    'flows' => [
+                        'authorizationCode' => [
+                            'x-scalar-client-id' => 'client-id',
+                            'x-usePkce' => 'SHA-256',
+                            'x-scalar-redirect-uri' => 'https://api.example.test/oauth2-redirect.html',
+                            'x-scalar-security-query' => ['tenant_id' => 'swagger'],
+                        ],
+                    ],
+                ],
+            ],
+        ], ScrambleAuthentication::scalarAuthentication());
     }
 
     #[Test]
-    public function it_allows_the_tenant_header_name_to_be_configured(): void
+    public function it_builds_the_scalar_login_without_tenant_when_tenant_support_is_disabled(): void
     {
         config([
-            'scramble-openapi.tenant.enabled' => true,
-            'scramble-openapi.tenant.header_name' => 'X-Accounting-Tenant-ID',
+            'app.url' => 'https://api.example.test',
+            'scramble-openapi.oauth2.client_id' => 'client-id',
         ]);
 
-        $spec = $this->openApi()->toArray();
-
-        $this->assertSame('X-Accounting-Tenant-ID', $spec['components']['securitySchemes']['tenantHeader']['name']);
+        $this->assertSame([
+            'preferredSecurityScheme' => [['oauth2']],
+            'securitySchemes' => [
+                'oauth2' => [
+                    'flows' => [
+                        'authorizationCode' => [
+                            'x-scalar-client-id' => 'client-id',
+                            'x-usePkce' => 'SHA-256',
+                            'x-scalar-redirect-uri' => 'https://api.example.test/oauth2-redirect.html',
+                        ],
+                    ],
+                ],
+            ],
+        ], ScrambleAuthentication::scalarAuthentication());
     }
 
     private function openApi(): OpenApi

@@ -25,7 +25,6 @@ class ScrambleSecurityRequirements implements OperationTransformer
             return;
         }
 
-        $oauthScheme = (string) config('scramble-openapi.swagger_ui.oauth_scheme', 'oauth2');
         $tenantEnabled = (bool) config('scramble-openapi.tenant.enabled', false);
         $tenantOnlyUriPatterns = config('scramble-openapi.security.tenant_only_uri_patterns', []);
 
@@ -34,12 +33,10 @@ class ScrambleSecurityRequirements implements OperationTransformer
         }
 
         if ($tenantEnabled) {
-            $tenantScheme = (string) config('scramble-openapi.tenant.scheme', 'tenantHeader');
-
             foreach ($tenantOnlyUriPatterns as $pattern) {
                 if (is_string($pattern) && Str::is($pattern, $uri)) {
                     $operation->security = [
-                        new SecurityRequirement([$tenantScheme => []]),
+                        new SecurityRequirement([ScrambleAuthentication::TENANT_SCHEME => []]),
                     ];
 
                     return;
@@ -47,10 +44,10 @@ class ScrambleSecurityRequirements implements OperationTransformer
             }
         }
 
-        $security = [$oauthScheme => []];
+        $security = [ScrambleAuthentication::OAUTH_SCHEME => []];
 
         if ($tenantEnabled) {
-            $security[(string) config('scramble-openapi.tenant.scheme', 'tenantHeader')] = [];
+            $security[ScrambleAuthentication::TENANT_SCHEME] = [];
         }
 
         $operation->security = [

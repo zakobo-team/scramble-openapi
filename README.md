@@ -1,250 +1,125 @@
 # Zakobo Scramble OpenAPI
 
-Zakobo OpenAPI conventions, SSO authentication and Swagger UI integration for Laravel apps using `dedoc/scramble`.
+Zakobo OpenAPI conventions, SSO login in Scalar, and Laravel Boost guidance for `dedoc/scramble`.
 
-The goal is that an app can install Scramble, install this package, publish config when needed, and get working API docs without copying service providers, routes, views or OpenAPI auth classes into the app.
-
-The package provides:
-
-- Scramble OpenAPI security schemes for OAuth2 Authorization Code with PKCE and tenant header auth.
-- Scramble operation security rules for tenant-only and authenticated API routes.
-- A Swagger UI route with Zakobo SSO authentication through either `auth-bootstrap` or static OAuth config.
-- A direct Authentication/Logout button instead of Swagger UI's default auth modal.
-- OAuth2 redirect view for Swagger UI.
-- A Stoplight/Scramble docs view with optional tenant header injection.
-- JSON:API filter key component schemas derived from the consuming app's generated concrete filter query parameters.
-- JSON:API error response schemas.
-- Include enum cleanup for recursive relationship paths.
-
-## Quick Start
-
-Install Scramble first, then install this package:
+## Install
 
 ```bash
-composer require dedoc/scramble
-composer require zakobo/scramble-openapi
+composer require dedoc/scramble zakobo/scramble-openapi
 ```
 
-The package is auto-discovered by Laravel and auto-configures Scramble by default.
+Laravel discovers the package. The package configures Scramble. The app needs no service provider, route, or view for it.
 
-It registers these routes:
+Set the Scramble renderer to Scalar in `config/scramble.php`:
 
-- `/docs/api`
-- `/docs/api.json`
-- `/docs/swagger`
-- `/oauth2-redirect.html`
-- `/docs/swagger/oauth2-redirect` as a legacy callback path
+```php
+'renderer' => 'scalar',
+```
 
-No app service provider, route file, controller, view or OpenAPI auth class is required.
+Scalar is the only supported docs UI.
+Keep `proxyUrl` set to `null` in `renderers.scalar`. The Scalar default sends Try it requests through a public proxy.
 
-## Required App Configuration
+The package adds these routes:
 
-Publish the config when the app needs tenant support, custom paths, custom OAuth URLs, or a fixed Swagger OAuth client:
+- `GET /docs/api` shows the Scalar docs page.
+- `GET /docs/api.json` returns the OpenAPI document. Scramble owns this route.
+- `GET /oauth2-redirect.html` returns a blank page for the OAuth popup.
+
+When Scramble dev tools are on, `/docs/api` builds the document live.
+When dev tools are off, `/docs/api` shows the exported file `public/docs/api.json`.
+Create the file with `php artisan scramble:export --path=public/docs/api.json`.
+
+## Configuration
+
+Publish the config file:
 
 ```bash
 php artisan vendor:publish --tag=scramble-openapi-config
 ```
 
-To make the Swagger UI Authentication button work, configure one of these:
-
-- `swagger_ui.auth_bootstrap_path` when the app exposes Zakobo's `auth-bootstrap` endpoint.
-- `oauth2.client_id` when the app uses a fixed Swagger OAuth client.
-
-If neither is configured, the docs still load, but authentication fails with this clear browser error:
-
-```text
-Missing OAuth client_id. Configure auth_bootstrap_path or oauth2.client_id.
-```
-
-## Non-Tenant App
-
-For an app without tenancy, leave `tenant.enabled` as `false`.
-
-The package will then:
-
-- document OAuth2 only
-- avoid tenant OpenAPI security schemes
-- avoid injecting tenant headers into API requests
-- avoid sending tenant parameters to OAuth
-
-Minimal static OAuth setup:
+The file has three groups:
 
 ```php
 return [
     'tenant' => [
         'enabled' => false,
+        'id' => 'swagger',
     ],
 
     'oauth2' => [
-        'client_id' => env('SCRAMBLE_OPENAPI_OAUTH2_CLIENT_ID'),
-        'authorization_url' => env('SCRAMBLE_OPENAPI_OAUTH2_AUTH_URL', 'https://auth.zakobo.test/oauth/authorize'),
-        'token_url' => env('SCRAMBLE_OPENAPI_OAUTH2_TOKEN_URL', 'https://auth.zakobo.test/oauth/token'),
-    ],
-];
-```
-
-## Tenant-Aware App
-
-For an app that requires a tenant header, enable tenant support and configure the header and security patterns.
-
-Example:
-
-```php
-return [
-    'swagger_ui' => [
-        'auth_bootstrap_path' => env('SCRAMBLE_OPENAPI_AUTH_BOOTSTRAP_PATH', '/api/v4/pa/auth-bootstrap'),
-    ],
-
-    'tenant' => [
-        'enabled' => true,
-        'id' => env('SCRAMBLE_OPENAPI_TENANT_ID', 'swagger'),
-        'scheme' => env('SCRAMBLE_OPENAPI_TENANT_SCHEME', 'tenantHeader'),
-        'header_name' => env('SCRAMBLE_OPENAPI_TENANT_HEADER_NAME', 'X-Tenant-ID'),
-        'oauth_parameter' => env('SCRAMBLE_OPENAPI_OAUTH_TENANT_PARAMETER', 'tenant_id'),
+        'client_id' => env('ZAKOBO_AUTH_AC_CLIENT_ID'),
+        'server_url' => env('ZAKOBO_AUTH_URL', 'https://auth.zakobo.test'),
     ],
 
     'security' => [
-        'api_prefix' => env('SCRAMBLE_OPENAPI_API_PREFIX', 'api/v4/'),
-        'tenant_only_uri_patterns' => [
-            'api/v4/pa/*',
-        ],
+        'api_prefix' => 'api/v4/',
+        'tenant_only_uri_patterns' => [],
     ],
 ];
 ```
 
-## Custom Scramble Setup
+Laravel merges package config one level deep.
+If the app sets a group, the app group replaces the whole package group.
+Set all keys of a group in the app file.
 
-No app service provider changes are required by default.
+The package derives these values:
 
-By default, the package calls `Scramble::configure()` for the app and applies the Zakobo SSO auth setup.
+- Authorization URL: `{oauth2.server_url}/oauth/authorize`.
+- Token URL: `{oauth2.server_url}/oauth/token`.
+- Redirect URL: `{APP_URL}/oauth2-redirect.html`.
 
-If an app already has its own Scramble service provider, or needs to add custom Scramble configuration, disable auto configuration:
+The tenant header is `X-Tenant-ID`. The OAuth tenant query parameter is `tenant_id`.
 
-```php
-'scramble' => [
-    'auto_configure' => false,
-],
-```
+## Scalar login
 
-Then call the configurator manually from the app's Scramble service provider:
+The login uses OAuth2 Authorization Code with PKCE.
 
-```php
-use Dedoc\Scramble\Scramble;
-use Zakobo\ScrambleOpenApi\ScrambleOpenApi;
+1. The user selects the OAuth2 login in Scalar.
+2. Scalar opens a popup to the authorization URL.
+3. The user logs in on the Auth server.
+4. The Auth server sends the popup to `/oauth2-redirect.html`.
+5. Scalar reads the code from the popup URL and gets the token.
 
-ScrambleOpenApi::configure(
-    Scramble::configure()
-        ->preferPatchMethod()
-        // Add app-specific Scramble configuration here.
-);
-```
+With `tenant.enabled`, Scalar sends the query parameter `tenant_id` and the header `X-Tenant-ID`. Both use the value of `tenant.id`.
 
-This keeps the package-owned OAuth, tenant security, docs view and Swagger UI setup, while still allowing the app to customize Scramble itself.
+Set up the Auth server:
 
-## Publishable Assets
+- Register `{APP_URL}/oauth2-redirect.html` as a redirect URI of the OAuth client.
+- Allow the docs origin in the CORS settings.
 
-Publish config:
+## Redirect page
 
-```bash
-php artisan vendor:publish --tag=scramble-openapi-config
-```
+`/oauth2-redirect.html` is a blank HTML page with no script.
+The path must not change. The OAuth clients have it registered.
 
-Publish views only when the app needs to override the package UI:
+## Transformers
 
-```bash
-php artisan vendor:publish --tag=scramble-openapi-views
-```
+The package always uses `preferPatchMethod()`. It adds these transformers:
 
-Legacy publish tags and namespaces from `zakobo/scramble-sso-auth-driver` remain available as a transition path, but new apps should use `zakobo/scramble-openapi`.
+- `ScrambleSecurityRequirements` sets the security of each operation under `security.api_prefix`.
+- `ScrambleAuthentication` adds the `oauth2` scheme and, with tenant support, the `tenantHeader` scheme.
+- `JsonApiErrorResponses` adds the JSON:API error responses.
+- `DocumentUuidRouteParameters` documents UUID route model parameters as `uuid` strings.
+- `RemoveRecursiveIncludeEnumValues` removes recursive relationship paths from include enums.
+- `DocumentFilterEnumSchemas` adds the `*FilterField` and `*FilterParameter` enums for JSON:API filters.
 
-There are no provider, controller or route stubs because those are owned by the package.
+The package also caches the JSON:API resource parameters for each resource class.
+The cache lives for one PHP process.
 
-## Full Config Example
+## AI agents
 
-Package defaults are intentionally environment-free so config caching stays safe. Apps should override with their own config file and `env()` values.
+The package ships a Laravel Boost guideline and the skill `scramble-openapi-development`.
 
-Example tenant-aware app override:
+The package must be a direct dependency of the app.
 
-```php
-return [
-    'enabled' => env('SCRAMBLE_OPENAPI_ENABLED', true),
+`php artisan boost:update` does not add a new package. Package discovery is an interactive step of `boost:install`.
 
-    'scramble' => [
-        'auto_configure' => env('SCRAMBLE_OPENAPI_AUTO_CONFIGURE', true),
-        'prefer_patch_method' => env('SCRAMBLE_OPENAPI_PREFER_PATCH_METHOD', true),
-        'ui_path' => env('SCRAMBLE_OPENAPI_DOCS_PATH', '/docs/api'),
-        'document_path' => env('SCRAMBLE_OPENAPI_DOCUMENT_PATH', '/docs/api.json'),
-    ],
+- New Boost setup: run `php artisan boost:install`. Select `zakobo/scramble-openapi`.
+- App that already uses Boost: add `"zakobo/scramble-openapi"` to the `packages` list in `boost.json`. Then run `php artisan boost:update`.
 
-    'swagger_ui' => [
-        'enabled' => env('SCRAMBLE_OPENAPI_SWAGGER_UI_ENABLED', true),
-        'path' => env('SCRAMBLE_OPENAPI_SWAGGER_UI_PATH', '/docs/swagger'),
-        'spec_path' => env('SCRAMBLE_OPENAPI_SWAGGER_UI_SPEC_PATH', '/docs/api.json'),
-        'auth_bootstrap_path' => env('SCRAMBLE_OPENAPI_AUTH_BOOTSTRAP_PATH', '/api/v4/pa/auth-bootstrap'),
-        'oauth_redirect_path' => env('SCRAMBLE_OPENAPI_OAUTH_REDIRECT_PATH', '/oauth2-redirect.html'),
-        'legacy_oauth_redirect_path' => env('SCRAMBLE_OPENAPI_LEGACY_OAUTH_REDIRECT_PATH', '/docs/swagger/oauth2-redirect'),
-        'oauth_scheme' => env('SCRAMBLE_OPENAPI_OAUTH_SCHEME', 'oauth2'),
-        'swagger_ui_dist_version' => env('SCRAMBLE_OPENAPI_SWAGGER_UI_DIST_VERSION', '5.20.1'),
-    ],
+Boost then adds `scramble-openapi-development` to `skills` in `boost.json`. Boost writes the guideline into the guideline file of the agent, for example `AGENTS.md` or `CLAUDE.md`. Boost installs the skill.
 
-    'tenant' => [
-        'enabled' => true,
-        'id' => env('SCRAMBLE_OPENAPI_TENANT_ID', 'swagger'),
-        'scheme' => env('SCRAMBLE_OPENAPI_TENANT_SCHEME', 'tenantHeader'),
-        'header_name' => env('SCRAMBLE_OPENAPI_TENANT_HEADER_NAME', 'X-Tenant-ID'),
-        'oauth_parameter' => env('SCRAMBLE_OPENAPI_OAUTH_TENANT_PARAMETER', 'tenant_id'),
-    ],
-
-    'oauth2' => [
-        'client_id' => env('SCRAMBLE_OPENAPI_OAUTH2_CLIENT_ID'),
-        'authorization_url' => env('SCRAMBLE_OPENAPI_OAUTH2_AUTH_URL', 'https://auth.zakobo.test/oauth/authorize'),
-        'token_url' => env('SCRAMBLE_OPENAPI_OAUTH2_TOKEN_URL', 'https://auth.zakobo.test/oauth/token'),
-        'redirect_url' => env('SCRAMBLE_OPENAPI_OAUTH2_REDIRECT_URL'),
-        'scopes' => array_values(array_filter(explode(' ', (string) env('SCRAMBLE_OPENAPI_OAUTH2_SCOPES', '')))),
-    ],
-
-    'security' => [
-        'api_prefix' => env('SCRAMBLE_OPENAPI_API_PREFIX', 'api/v4/'),
-        'tenant_only_uri_patterns' => [
-            'api/v4/pa/*',
-        ],
-    ],
-];
-```
-
-## SSO Requirements
-
-The Swagger OAuth client in Auth Laravel must allow the configured redirect URI.
-
-Default local callback:
-
-```text
-https://api.zakobo.test/oauth2-redirect.html
-```
-
-The app must also allow the Swagger/API origin in Auth Laravel CORS configuration.
-
-## Troubleshooting
-
-Authentication button says `Missing OAuth client_id`
-
-Configure either `swagger_ui.auth_bootstrap_path` or `oauth2.client_id`.
-
-Swagger UI opens but API requests get tenant errors
-
-Enable `tenant.enabled` and verify `tenant.id`, `tenant.header_name` and `security.tenant_only_uri_patterns`.
-
-OAuth redirects back with `invalid_grant`
-
-Verify that the OAuth client redirect URI exactly matches the configured callback, including scheme, host and path.
-
-OAuth token request fails with CORS
-
-Allow the API/docs origin in Auth Laravel CORS configuration.
-
-Docs route conflicts with an app route
-
-Change `scramble.ui_path`, `scramble.document_path`, `swagger_ui.path` or `swagger_ui.oauth_redirect_path`.
+After you update the package, run `php artisan boost:update` again. It refreshes the guideline and the skill.
 
 ## Testing
 
