@@ -10,4 +10,9 @@ class JsonApiResourceController
     {
         return new ExampleJsonApiResource(null);
     }
+
+    public function showWithoutQueryString(): ExampleJsonApiResource
+    {
+        return (new ExampleJsonApiResource(null))->ignoreFieldsAndIncludesInQueryString();
+    }
 }
