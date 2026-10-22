@@ -4,7 +4,7 @@
     "type": "library",
     "license": "MIT",
     "require": {
-        "php": "^8.4",
+        "php": "^8.5.12",
         "dedoc/scramble": "^0.13.42",
         "illuminate/contracts": "^13.0",
         "illuminate/database": "^13.0",
